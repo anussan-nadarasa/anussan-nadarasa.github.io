@@ -1,0 +1,11 @@
+---
+title: "Essays"
+description: "Reflective and occasional pieces."
+listing:
+  contents: entries
+  include:
+    type: essay
+  sort: "date desc"
+  type: default
+  fields: [date, title, description, reading-time]
+---

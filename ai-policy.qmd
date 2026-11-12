@@ -1,0 +1,19 @@
+---
+title: "AI use"
+---
+
+Generative artificial intelligence (AI) is now part of how skills are acquired and work is produced, and this website does not pretend otherwise. What it aims to make visible is the boundary between what generative AI produced and what was understood, decided and verified by a person.
+
+Every evidence entry carries a box with three parts:
+
+- **Tools:** which generative AI tools were used, with model versions where known.
+- **AI did:** what those tools produced or helped with, for example drafting code, suggesting an analysis approach, or editing prose.
+- **Author did and checked:** the decisions made, the work done by hand, and how the AI's output was checked.
+
+Essays carry the same box when generative AI was involved.
+
+## Principles
+
+1. No output from generative AI is presented as evidence of a skill unless it was understood and checked.
+2. No patient-identifiable data is ever entered into a generative AI tool or published here. Every change to this site is scanned for NHS numbers and similar identifiers before it is committed.
+3. Where a conversation with a generative AI tool was itself instructive, it may be linked as part of the evidence.

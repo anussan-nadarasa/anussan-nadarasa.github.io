@@ -1,0 +1,27 @@
+---
+# Copy to _drafts/YYYY-MM-DD-short-name/index.qmd to write it (not tracked by git).
+# Move the folder into entries/ when it is ready to publish.
+title: "Short descriptive title"
+date: 2026-01-31
+type: project            # log | project | course | paper | reflection
+description: "One sentence shown in listings."
+categories: [skill-one, skill-two]   # use names from skills.yml
+evidence:                # links someone can check
+  - label: Code
+    url: https://github.com/...
+  - label: Certificate
+    url: files/certificate.pdf     # put files next to index.qmd
+ai:
+  tools: [Claude Opus 5.5]          # or write  ai: none
+  did: "What the AI produced or helped with."
+  me: "What was decided and done by hand, and how the AI output was checked."
+---
+
+Write the entry here. Code chunks work:
+
+```{r}
+#| echo: true
+summary(cars)
+```
+
+Cite references from references.bib like this [@key].

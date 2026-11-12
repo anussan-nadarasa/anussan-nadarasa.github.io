@@ -1,0 +1,36 @@
+---
+title: "Building this site"
+date: 2026-11-12
+type: project
+description: "Designing a publishing pipeline for evidence of learning: plain text, git history, automated checks."
+categories: [git, quarto, research-workflow]
+evidence:
+  - label: Source code for this site
+    url: https://github.com/anussan-nadarasa/anussan-nadarasa.github.io
+ai:
+  tools: [Claude Opus 5.5]
+  did: "Reviewed the code of a reference site, proposed the pipeline design, wrote the site configuration, checks and deployment workflow, and drafted the initial site text."
+  me: "Chose a git-based Quarto site over a Notion-based one; required that nothing is published without manual review; set the scope and wording of the site; set up the GitHub account and repository; reviewed every page before publication."
+---
+
+## Why build it this way
+
+The aim is a site where each claim of a skill comes with evidence that can be checked, a date that can be verified, and an honest account of what generative artificial intelligence (AI) did.
+
+Four decisions follow from that:
+
+1. **Plain text in git.** Every entry is a text file in a public repository, so its full revision history is open. A commit message starting with `publish:` marks a meaningful revision; other commits (typo fixes) are not highlighted.
+2. **Checks before publishing.** A script scans every change for NHS numbers and similar identifiers, and blocks data files, before anything is committed.
+3. **A required statement of AI use.** Every evidence entry has to say what generative AI did and what was done and checked by hand. The build fails if it is missing.
+4. **Nothing is published without review.** Every change is checked and built automatically, but the site only goes live when publishing is started by hand.
+
+## What was built
+
+- A [Quarto](https://quarto.org) website with separate Evidence and Essays listings and a feed.
+- A filter that adds the AI-use box, the evidence links and a revision-history link to each entry.
+- Header validation and a patient-data scan, run before each commit and again during the online build.
+- An automatic build on every push, with publishing to GitHub Pages started by hand.
+
+## Next
+
+Version-by-version comparisons on each page, and a skills ledger showing when each skill was first and last evidenced.

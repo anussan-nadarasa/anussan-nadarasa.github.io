@@ -1,0 +1,6 @@
+#!/bin/sh
+# Runs before every commit. Turn it on once with:
+#   git config core.hooksPath scripts/hooks
+set -e
+python3 scripts/check_pii.py --staged
+python3 scripts/validate.py

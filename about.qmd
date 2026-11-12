@@ -1,0 +1,13 @@
+---
+title: "About"
+---
+
+This website is a public record of skill acquisition in an age of generative artificial intelligence (AI), kept as a personal reference and available for anyone to view. Entries are either evidence (projects, courses, papers and short logs, each stating how generative AI was used) or essays (reflective and occasional pieces).
+
+It arises from a conversation with Prof Pearse Keane (Professor of Artificial Medical Intelligence at the UCL Institute of Ophthalmology) about meaningful methods of acquiring skills for medical research, and from subsequent reflection on how such skills can be demonstrated now that submission-ready output can be produced by generative AI.
+
+Several principles of the publishing pipeline are unabashedly borrowed from the notes on the website of [Daksh Mehta](https://dakshmehta.com/), whose work is gratefully acknowledged.
+
+## How the website works
+
+Every entry is a plain-text file in a public [git repository](https://github.com/anussan-nadarasa/anussan-nadarasa.github.io). Each entry page links to its own revision history, so it is possible to see when it was first written and how it changed. Meaningful revisions are marked with a short note; typo fixes are not. Each entry also states which generative AI tools were used, what they did, and what was done and checked by hand (see [AI use](ai-policy.qmd)).

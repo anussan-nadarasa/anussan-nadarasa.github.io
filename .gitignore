@@ -1,0 +1,19 @@
+# Drafts: never committed, never published. Move a folder to entries/ when ready.
+/_drafts/
+
+# Built site (the online build makes it; never commit it)
+/_site/
+/.quarto/
+*_files/
+
+# Python / R / OS clutter
+__pycache__/
+.Rhistory
+.RData
+.Rproj.user/
+.DS_Store
+
+# Keep _freeze/ tracked: it holds saved code results so the online build
+# does not re-run analyses.
+
+**/*.quarto_ipynb

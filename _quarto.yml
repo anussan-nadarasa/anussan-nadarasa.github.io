@@ -1,0 +1,53 @@
+project:
+  type: website
+  output-dir: _site
+  pre-render: scripts/validate.py
+  resources:
+    - robots.txt
+
+# ---------------------------------------------------------------------------
+# Site name and URLs.
+# ---------------------------------------------------------------------------
+website:
+  title: "Anussan Nadarasa"
+  site-url: "https://anussan-nadarasa.github.io"
+  description: "A public record of skill acquisition in an age of generative artificial intelligence."
+  repo-url: "https://github.com/anussan-nadarasa/anussan-nadarasa.github.io"
+  navbar:
+    left:
+      - href: evidence.qmd
+        text: Evidence
+      - href: essays.qmd
+        text: Essays
+      - href: about.qmd
+        text: About
+      - href: ai-policy.qmd
+        text: AI use
+  page-footer:
+    left: "© 2026 Anussan Nadarasa. All rights reserved."
+    right: "Built with [Quarto](https://quarto.org)"
+
+# Used by the AI-box filter to link each entry to its git history.
+history-repo: "https://github.com/anussan-nadarasa/anussan-nadarasa.github.io"
+history-branch: main
+
+format:
+  html:
+    theme: [cosmo, theme.scss]
+    toc: false
+    smooth-scroll: false
+    link-external-newwindow: true
+    filters:
+      - filters/entry-boxes.lua
+    date-format: "D MMM YYYY"
+    include-in-header:
+      text: |
+        <meta name="robots" content="noarchive">
+
+execute:
+  # Code in entries is run on your machine only. Results are saved in _freeze/
+  # (commit that folder) so the online build never re-runs your analyses.
+  freeze: auto
+
+bibliography: references.bib
+csl: vancouver.csl   # NLM/Vancouver (Citing Medicine, citation-sequence)

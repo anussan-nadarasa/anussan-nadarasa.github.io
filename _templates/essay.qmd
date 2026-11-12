@@ -1,0 +1,13 @@
+---
+# Copy to _drafts/YYYY-MM-DD-short-name/index.qmd to write it (not tracked by git).
+# Move the folder into entries/ when it is ready to publish.
+title: "Essay title"
+date: 2026-01-31
+type: essay
+description: "One sentence shown in the essays list."
+# Optional:
+# categories: [reflection]   # add skills only if the essay evidences one
+# ai: none                   # or the tools/did/me block, if AI was involved
+---
+
+Write here.

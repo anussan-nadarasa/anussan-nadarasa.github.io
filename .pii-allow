@@ -1,0 +1,4 @@
+# Data or imaging files that are safe to publish (synthetic, public or
+# fully anonymised with approval). One path per line, relative to the repo root.
+# Example:
+# entries/2026-12-01-km-practice/data/synthetic-cohort.csv

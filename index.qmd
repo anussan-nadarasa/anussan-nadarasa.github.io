@@ -1,0 +1,23 @@
+---
+title: "Anussan Nadarasa"
+subtitle: "Skill acquisition in an age of generative artificial intelligence"
+listing:
+  id: recent
+  contents: entries
+  sort: "date-modified desc"
+  type: table
+  max-items: 8
+  fields: [date-modified, title, type]
+  field-display-names:
+    date-modified: "Updated"
+    type: "Type"
+  sort-ui: false
+  filter-ui: false
+---
+
+This site is a public record of skills acquired in the age of generative artificial intelligence (AI). It holds two kinds of entry: [evidence](evidence.qmd), meaning projects, courses, papers and short logs, each with a statement of how generative AI was used; and [essays](essays.qmd), meaning reflective and occasional pieces. More about why it exists is on the [about page](about.qmd).
+
+## Recently updated
+
+::: {#recent}
+:::

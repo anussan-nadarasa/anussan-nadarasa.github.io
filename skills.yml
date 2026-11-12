@@ -1,0 +1,22 @@
+# Controlled list of skill names used in `categories:`.
+# The validator warns about any skill not listed here, which keeps the
+# skills filter tidy (no "R", "r" and "R-programming" as three skills).
+# Add new skills as you go. Keep them lower-case with hyphens.
+skills:
+  - git
+  - quarto
+  - research-workflow
+  - r
+  - python
+  - statistics
+  - survival-analysis
+  - critical-appraisal
+  - systematic-review
+  - machine-learning
+  - deep-learning
+  - medical-imaging
+  - large-language-models
+  - prompt-engineering
+  - data-governance
+  - scientific-writing
+  - reflection

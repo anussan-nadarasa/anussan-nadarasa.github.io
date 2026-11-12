@@ -1,0 +1,60 @@
+name: Build and publish
+
+# Every push runs the checks and builds the site, but nothing goes live until
+# you press "Run workflow" on the Actions tab (Build and publish > Run workflow).
+# To publish automatically on every push instead, delete the `if:` line in
+# the deploy job below.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history: needed for dates and revision links
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install pyyaml
+
+      - name: Scan for patient-identifiable data
+        run: python3 scripts/check_pii.py
+
+      - name: Set file dates from git history
+        run: python3 scripts/restore_mtime.py
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Render site
+        run: quarto render       # runs scripts/validate.py first (TODOs are errors here)
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,6 @@
+# Applies to every entry in this folder.
+# "last-modified" is taken from the file's timestamp. The online build sets
+# those timestamps from git (scripts/restore_mtime.py), so "Updated" dates
+# reflect real commits, not when the build happened to run.
+date-modified: last-modified
+title-block-categories: true

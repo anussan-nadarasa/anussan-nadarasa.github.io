@@ -1,0 +1,20 @@
+---
+title: "Evidence"
+description: "Projects, courses, papers and logs, newest first."
+language:
+  listing-page-field-categories: "Skills"
+listing:
+  contents: entries
+  exclude:
+    type: essay
+  sort: "date desc"
+  type: table
+  categories: true
+  fields: [date, title, type, categories]
+  field-display-names:
+    date: "Date"
+    type: "Type"
+    categories: "Skills"
+---
+
+Each entry states what generative artificial intelligence (AI) did and what was done and checked by hand. Select a skill to filter.

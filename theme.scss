@@ -1,0 +1,35 @@
+/*-- scss:defaults --*/
+// A quiet, text-first look. Change these few values to restyle the whole site.
+$body-bg: #fbfaf7;
+$body-color: #1d1d1b;
+$link-color: #1f4e79;
+$font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+$font-size-root: 17px;
+$navbar-bg: $body-bg;
+$navbar-fg: $body-color;
+$navbar-hl: $link-color;
+$footer-bg: $body-bg;
+$border-radius: 4px;
+
+/*-- scss:rules --*/
+#quarto-content main,
+.page-columns .content { max-width: 680px; }
+
+.navbar { border-bottom: 1px solid #e6e3dc; }
+.navbar-title { font-weight: 600; }
+
+h1.title { font-size: 1.7rem; font-weight: 600; }
+h2 { font-size: 1.25rem; font-weight: 600; margin-top: 2rem; border-bottom: none; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+
+// Listing tables: compact, no zebra striping
+.quarto-listing-table td, .quarto-listing-table th { padding: .35rem .5rem; }
+.quarto-listing-table { font-size: .95rem; }
+
+// AI-use and evidence boxes added by filters/entry-boxes.lua
+.entry-meta { font-size: .9rem; color: #5b5a55; margin: 1.5rem 0; }
+.entry-meta a { color: inherit; }
+.entry-type {
+  display: inline-block; font-size: .75rem; letter-spacing: .03em;
+  padding: .05rem .45rem; border: 1px solid #cfccc3; border-radius: 3px; color: #5b5a55;
+}
