@@ -1,6 +1,5 @@
 ---
 title: "Anussan Nadarasa"
-subtitle: "Skill acquisition in an age of generative artificial intelligence"
 listing:
   id: recent
   contents: entries
