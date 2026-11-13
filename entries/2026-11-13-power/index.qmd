@@ -6,9 +6,9 @@ description: "How large a trial needs to be, where the sample size formula comes
 categories: [statistics]
 ---
 
-How many patients does a trial need? Most trial protocols answer this in a short paragraph that few people read. The paragraph matters more than it looks, because the same calculation tells us how to read a negative result, and why positive results from small trials are usually too optimistic.
+How many patients does a trial need? Most trial protocols answer this in a short paragraph that few people read. The paragraph matters more than it looks, because the same calculation explains how to read a negative result, and why positive results from small trials are usually too optimistic.
 
-We will use one example throughout. A new drug is compared with placebo for preventing stroke over five years. Suppose the true risk of stroke is 10% on placebo and 8% on the drug. The true risk difference is then
+One example is used throughout. A new drug is compared with placebo for preventing stroke over five years. The true risk of stroke is taken to be 10% on placebo and 8% on the drug. The true risk difference is then
 
 $$
 \delta = p_1 - p_2 = 0.10 - 0.08 = 0.02,
@@ -16,22 +16,22 @@ $$
 
 or two percentage points.
 
-A trial with $n$ patients in each arm estimates $\delta$ by the difference between the two observed proportions, $\hat\delta = \hat p_1 - \hat p_2$. This estimate will not be exactly 0.02. If we ran the same trial many times, the estimates would scatter around 0.02, and for trials of reasonable size the scatter is close to a normal distribution:
+A trial with $n$ patients in each arm estimates $\delta$ by the difference between the two observed proportions, $\hat\delta = \hat p_1 - \hat p_2$. This estimate will not be exactly 0.02. If the same trial were run many times, the estimates would scatter around 0.02, and for trials of reasonable size the scatter is close to a normal distribution:
 
 $$
 \hat\delta \sim \mathcal{N}\!\left(\delta,\; \mathrm{SE}^2\right), \qquad
 \mathrm{SE} = \sqrt{\frac{p_1(1-p_1) + p_2(1-p_2)}{n}}.
 $$
 
-The standard error, SE, is the typical size of the error in a single trial.[^var] In our example $p_1(1-p_1) + p_2(1-p_2) = 0.09 + 0.0736 = 0.1636$. With 2,000 patients per arm,
+The standard error, SE, is the typical size of the error in a single trial.[^var] In this example $p_1(1-p_1) + p_2(1-p_2) = 0.09 + 0.0736 = 0.1636$. With 2,000 patients per arm,
 
 $$
 \mathrm{SE} = \sqrt{0.1636 / 2000} \approx 0.0090,
 $$
 
-a little under one percentage point. Note that $n$ appears under a square root. A trial four times as large has half the error, not a quarter.
+a little under one percentage point. The sample size, $n$, appears under a square root. A trial four times as large has half the error, not a quarter.
 
-Now we need a rule for deciding whether the drug works. The usual rule asks whether the observed difference is larger than chance would often produce if the drug did nothing. At a two-sided significance level of 5%, we call the result significant if
+A rule is then needed for deciding whether the drug works. The usual rule asks whether the observed difference is larger than chance would often produce if the drug did nothing. At a two-sided significance level of 5%, the result is called significant if
 
 $$
 \left| \frac{\hat\delta}{\mathrm{SE}} \right| > 1.96.
@@ -45,7 +45,7 @@ $$
 
 With 2,000 per arm, $c \approx 0.0177$. The trial needs to observe a difference of about 1.8 percentage points or more.
 
-Power is the probability that the trial is significant, given that the drug really works. We know $\hat\delta$ is centred on $\delta$ with standard deviation SE, so the probability that it lands above $c$ is
+Power is the probability that the trial is significant, given that the drug really works. Since $\hat\delta$ is centred on $\delta$ with standard deviation SE, so the probability that it lands above $c$ is
 
 $$
 \text{power} \approx \Phi\!\left( \frac{\delta}{\mathrm{SE}} - 1.96 \right),
@@ -59,13 +59,13 @@ $$
 
 So a trial of 4,000 patients, testing a drug that does prevent strokes, has only a 60% chance of showing it.
 
-We can turn this around to find the sample size. For power $1-\beta$, we need the quantity inside $\Phi$ to equal $z_{1-\beta}$, the point with probability $1-\beta$ below it. For 80% power, $z_{0.8} \approx 0.84$. Setting $\delta/\mathrm{SE} - 1.96 = 0.84$, substituting for SE and solving for $n$ gives the familiar formula
+This can be turned around to find the sample size. For power $1-\beta$, the quantity inside $\Phi$ must equal $z_{1-\beta}$, the point with probability $1-\beta$ below it. For 80% power, $z_{0.8} \approx 0.84$. Setting $\delta/\mathrm{SE} - 1.96 = 0.84$, substituting for SE and solving for $n$ gives the familiar formula
 
 $$
 n = \frac{\left(z_{1-\alpha/2} + z_{1-\beta}\right)^2 \left[\, p_1(1-p_1) + p_2(1-p_2) \,\right]}{\delta^2}.
 $$
 
-In our example,
+In this example,
 
 $$
 n = \frac{(1.96 + 0.84)^2 \times 0.1636}{0.02^2} \approx 3{,}210
@@ -83,17 +83,17 @@ The $\delta^2$ in the denominator is worth dwelling on. The required size depend
 
 If the effect is half as large, the trial must be four times as large. Many treatments have small absolute effects, which is why convincing trials of them are large. It also means that a trial planned around an optimistic guess at the effect will have much less power than intended if the real effect is smaller.
 
-What does low power mean for reading a result? Take the negative case first. If our trial of 2,000 per arm finds no significant difference, we should not conclude that the drug does not work. A drug that does work would give this result 40% of the time. The confidence interval shows this more clearly than the p-value. A non-significant result from this trial might have an interval of $-0.002$ to $0.033$, which includes no effect but also includes effects larger than the true one.
+What does low power mean for reading a result? The negative case comes first. If the trial of 2,000 per arm finds no significant difference, it should not be concluded that the drug does not work. A drug that does work would give this result 40% of the time. The confidence interval shows this more clearly than the p-value. A non-significant result from this trial might have an interval of $-0.002$ to $0.033$, which includes no effect but also includes effects larger than the true one.
 
-The positive case is less obvious. Suppose a trial is significant. Its estimate must have landed above $c$, so the significant trials are a selected group: the ones where the estimate happened to be large enough. If $c$ is well below the true effect, as in a large trial, most estimates clear it anyway and the selection makes little difference. If $c$ is above the true effect, as in a small trial, an estimate can only clear it if chance has pushed it upwards. The significant results from small trials will then be too large on average.
+The positive case is less obvious. When a trial is significant, its estimate must have landed above $c$, so the significant trials are a selected group: the ones where the estimate happened to be large enough. If $c$ is well below the true effect, as in a large trial, most estimates clear it anyway and the selection makes little difference. If $c$ is above the true effect, as in a small trial, an estimate can only clear it if chance has pushed it upwards. The significant results from small trials will then be too large on average.
 
-We can work out by how much. For a normal variable, the average value given that it exceeds a threshold is[^trunc]
+The size of the overestimate can be worked out. For a normal variable, the average value given that it exceeds a threshold is[^trunc]
 
 $$
 \mathbb{E}\big[\hat\delta \;\big|\; \hat\delta > c\big] = \delta + \mathrm{SE} \cdot \frac{\phi(a)}{1 - \Phi(a)}, \qquad a = \frac{c - \delta}{\mathrm{SE}} = 1.96 - \frac{\delta}{\mathrm{SE}},
 $$
 
-where $\phi$ is the standard normal density. The second term is the average amount by which significant estimates overshoot. It gets larger as $a$ gets larger, which happens as the trial gets smaller. Dividing the average significant estimate by the true effect gives an exaggeration ratio. For our example:
+where $\phi$ is the standard normal density. The second term is the average amount by which significant estimates overshoot. It gets larger as $a$ gets larger, which happens as the trial gets smaller. Dividing the average significant estimate by the true effect gives an exaggeration ratio. For this example:
 
 | Patients per arm | $\delta/\mathrm{SE}$ | Power | Smallest significant difference | Average significant estimate | Exaggeration |
 |---|---|---|---|---|---|
@@ -105,7 +105,7 @@ where $\phi$ is the standard normal density. The second term is the average amou
 | 3,210 | 2.80 | 80% | 1.4 points | 2.2 points | 1.1× |
 | 5,000 | 3.50 | 94% | 1.1 points | 2.1 points | 1.0× |
 
-With 200 patients per arm, a significant trial reports a risk difference of about 7 percentage points on average, when the true difference is 2. Each of these trials could have been run and analysed correctly. The overestimate comes from the fact that we only see a large effect when the trial is significant, and in a small trial the trial is only significant when the effect is overestimated.
+With 200 patients per arm, a significant trial reports a risk difference of about 7 percentage points on average, when the true difference is 2. Each of these trials could have been run and analysed correctly. The overestimate arises because a large effect is only seen when the trial is significant, and in a small trial the trial is only significant when the effect is overestimated.
 
 Small trials can also be significant in the wrong direction. With 200 per arm, about 4% of significant results suggest the drug causes strokes; with 100 per arm, about 9%. With adequate power this almost never happens.
 
