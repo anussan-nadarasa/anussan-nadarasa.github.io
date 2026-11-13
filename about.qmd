@@ -4,7 +4,7 @@ title: "About"
 
 This website is a record of skill development relevant to research, kept as a personal reference and available for anyone to view. Entries are either evidence (projects, courses, papers and short logs) or essays (reflective and occasional pieces).
 
-It arises from a conversation with Prof Pearse Keane (Professor of Artificial Medical Intelligence at the UCL Institute of Ophthalmology) about meaningful methods of acquiring skills for medical research, and from subsequent reflection on how such acquisition can be demonstrated now that submission-ready output can be produced by generative artificial intelligence (AI).
+It arises from discussion with Prof Pearse Keane (Professor of Artificial Medical Intelligence at the UCL Institute of Ophthalmology) about meaningful ways for medical students to acquire skills for medical research, and from subsequent reflection on how such acquisition can be demonstrated in an era when submission-ready output can be produced by generative artificial intelligence (AI).
 
 Several principles of the publishing pipeline are unabashedly borrowed from the notes on the website of [Daksh Mehta](https://dakshmehta.com/), whose work is gratefully acknowledged.
 
