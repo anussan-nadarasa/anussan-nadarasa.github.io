@@ -516,8 +516,6 @@ function Pandoc(doc)
   local repo = meta["history-repo"] and str(meta["history-repo"]) or ""
   if repo:find("YOUR%-GITHUB%-USERNAME") then repo = "" end
   local versions = load_versions()
-  local vb = versions_blocks(repo, versions)
-  if vb then bottom:extend(vb) end
   local slider = versions and timeline_block(versions)
   local branch = meta["history-branch"] and str(meta["history-branch"]) or "main"
   local rel = relative_source_path()
