@@ -118,7 +118,7 @@ def render(markdown):
     key = hashlib.sha256(body.encode("utf-8")).hexdigest()
     if key in _render_cache:
         return _render_cache[key]
-    cmd_base = ["-f", "markdown", "-t", "html", "--citeproc",
+    cmd_base = ["-f", "markdown", "-t", "html", "--mathjax", "--citeproc",
                 "--bibliography", str(ROOT / "references.bib"), "--csl", str(ROOT / "vancouver.csl")]
     out = None
     for cmd in (["quarto", "pandoc"], ["pandoc"]):

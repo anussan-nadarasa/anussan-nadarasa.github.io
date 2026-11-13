@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var toggle = box.querySelector('.v-toggle input');
   var note = box.querySelector('.v-note');
   var prev = box.querySelector('.v-prev'), next = box.querySelector('.v-next');
-  var shown = null, timer = null;
+  var shown = (n - 1) + ':false', timer = null;
   function words(v) { return v.words; }
   function render(focus) {
     var v = data[i], latest = i === n - 1;
@@ -386,7 +386,14 @@ document.addEventListener('DOMContentLoaded', function () {
     var html = showChanges ? v.changes : (latest ? current : v.body);
     body.style.opacity = 0;
     clearTimeout(timer);
-    timer = setTimeout(function () { body.innerHTML = html; body.style.opacity = 1; }, 140);
+    timer = setTimeout(function () {
+      body.innerHTML = html;
+      if (window.MathJax && MathJax.typesetPromise) {
+        if (MathJax.typesetClear) MathJax.typesetClear([body]);
+        MathJax.typesetPromise([body]).catch(function () {});
+      }
+      body.style.opacity = 1;
+    }, 140);
   }
   function go(k, focus) { i = Math.max(0, Math.min(n - 1, k)); render(focus); }
   bars.forEach(function (b, k) { b.addEventListener('click', function () { go(k, false); }); });
