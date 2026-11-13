@@ -10,7 +10,7 @@ Every evidence entry carries a box with three parts:
 - **AI did:** what those tools produced or helped with, for example drafting code, suggesting an analysis approach, or editing prose.
 - **Author did and checked:** the decisions made, the work done by hand, and how the AI's output was checked.
 
-Essays carry the same box when generative AI was involved.
+Essays carry the same box when generative AI was involved. Projects still in progress show only their work log; the statement of AI use is added when the project is published.
 
 ## Principles
 
