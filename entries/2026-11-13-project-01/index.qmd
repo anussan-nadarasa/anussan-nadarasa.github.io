@@ -1,0 +1,13 @@
+---
+title: "Research project in progress"
+date: 2026-11-13
+type: log
+description: "Details will be published when the project is complete."
+ai:
+  tools: [Claude Opus 5.5]
+  did: "Assists with searching, drafting and checking. A full account will be published with the project."
+  me: "Sets the question and methods, makes every decision and checks all output. Key steps are done independently by two people."
+worklog: project-01
+---
+
+The project's repository is private until the work is complete. The log below shows when work was done, without its content; when the repository is released, every entry can be checked against it.
