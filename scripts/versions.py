@@ -4,8 +4,15 @@ Builds the version-by-version comparison shown at the foot of each entry.
 
 For every entries/*/index.qmd, reads the file's committed history (following
 renames) and writes _versions/FOLDER.json: one item per distinct version,
-oldest first, with its commit, date, the number of words added and removed,
-and a word-level comparison with the previous version as HTML.
+oldest first, with
+  - its commit, date, and the number of words added and removed;
+  - `html`: a word-level comparison of the whole file (header included) with
+    the previous version, for the full record of changes;
+  - `body`: the version's text rendered to HTML, for the slider;
+  - `changes`: that text with the paragraphs added since the previous version
+    highlighted and those removed struck through.
+Everything is prepared here, at build time: the page makes no requests to
+GitHub, so it keeps working if GitHub is unavailable.
 
 Runs before each build (see pre-render in _quarto.yml). Only committed
 versions are shown: the live site is always built from commits. Needs the
@@ -13,7 +20,9 @@ full git history; the online build fetches it.
 """
 
 import difflib
+import hashlib
 import html
+from html.parser import HTMLParser
 import json
 import re
 import subprocess
@@ -99,6 +108,122 @@ def compare(old, new):
     return "".join(parts), added, removed
 
 
+FRONT = re.compile(r"\A---\s*\n.*?\n---\s*\n", re.S)
+_render_cache = {}
+
+
+def render(markdown):
+    """Body text of a version as HTML, via the pandoc that comes with Quarto."""
+    body = FRONT.sub("", markdown, count=1)
+    key = hashlib.sha256(body.encode("utf-8")).hexdigest()
+    if key in _render_cache:
+        return _render_cache[key]
+    cmd_base = ["-f", "markdown", "-t", "html", "--citeproc",
+                "--bibliography", str(ROOT / "references.bib"), "--csl", str(ROOT / "vancouver.csl")]
+    out = None
+    for cmd in (["quarto", "pandoc"], ["pandoc"]):
+        try:
+            out = subprocess.run(cmd + cmd_base, input=body, capture_output=True, text=True,
+                                 cwd=ROOT, check=True).stdout
+            break
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            continue
+    if out is None:
+        out = "<pre>" + html.escape(body) + "</pre>"
+    _render_cache[key] = out
+    return out
+
+
+VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+
+
+class _Blocks(HTMLParser):
+    """Splits HTML into its top-level elements."""
+
+    def __init__(self, text):
+        super().__init__(convert_charrefs=False)
+        self.text, self.depth, self.start, self.blocks = text, 0, None, []
+        self.line_starts = [0]
+        for m in re.finditer("\n", text):
+            self.line_starts.append(m.end())
+
+    def _offset(self):
+        line, col = self.getpos()
+        return self.line_starts[line - 1] + col
+
+    def handle_starttag(self, tag, attrs):
+        if tag in VOID:
+            if self.depth == 0:
+                end = self.text.index(">", self._offset()) + 1
+                self.blocks.append(self.text[self._offset():end])
+            return
+        if self.depth == 0:
+            self.start = self._offset()
+        self.depth += 1
+
+    def handle_endtag(self, tag):
+        if tag in VOID:
+            return
+        self.depth -= 1
+        if self.depth == 0 and self.start is not None:
+            end = self.text.index(">", self._offset()) + 1
+            self.blocks.append(self.text[self.start:end])
+            self.start = None
+
+
+def blocks(html_text):
+    p = _Blocks(html_text)
+    p.feed(html_text)
+    p.close()
+    return p.blocks or [html_text]
+
+
+def block_changes(old_html, new_html):
+    """New version's text, with added blocks marked and removed ones kept, struck through."""
+    a, b = blocks(old_html), blocks(new_html)
+    norm = lambda x: re.sub(r"\s+", " ", x).strip()
+    sm = difflib.SequenceMatcher(None, [norm(x) for x in a], [norm(x) for x in b], autojunk=False)
+    out = []
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == "equal":
+            out.extend(b[j1:j2])
+            continue
+        if tag == "replace" and i2 - i1 == j2 - j1:
+            # Same number of blocks on each side: compare them pair by pair,
+            # so a list that gained an item shows just that item.
+            for x, y in zip(a[i1:i2], b[j1:j2]):
+                merged = list_changes(x, y)
+                if merged:
+                    out.append(merged)
+                else:
+                    out.append(f'<div class="v-del">{x}</div>')
+                    out.append(f'<div class="v-ins">{y}</div>')
+            continue
+        out.extend(f'<div class="v-del">{x}</div>' for x in a[i1:i2])
+        out.extend(f'<div class="v-ins">{x}</div>' for x in b[j1:j2])
+    return "\n".join(out)
+
+
+LIST = re.compile(r"\A(<(ol|ul)\b[^>]*>)(.*)(</\2>)\Z", re.S)
+
+
+def list_changes(old, new):
+    """Two versions of one list: compare item by item."""
+    ma, mb = LIST.match(old.strip()), LIST.match(new.strip())
+    if not (ma and mb and ma.group(2) == mb.group(2)):
+        return None
+    ia, ib = blocks(ma.group(3)), blocks(mb.group(3))
+    norm = lambda x: re.sub(r"\s+", " ", x).strip()
+    sm = difflib.SequenceMatcher(None, [norm(x) for x in ia], [norm(x) for x in ib], autojunk=False)
+    items = []
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == "equal":
+            items.extend(ib[j1:j2]); continue
+        items.extend(re.sub(r"\A<li\b", '<li class="v-del"', x) for x in ia[i1:i2])
+        items.extend(re.sub(r"\A<li\b", '<li class="v-ins"', x) for x in ib[j1:j2])
+    return mb.group(1) + "\n" + "\n".join(items) + "\n" + mb.group(4)
+
+
 def build(entry):
     rel = entry.relative_to(ROOT).as_posix()
     versions, prev_text = [], None
@@ -109,11 +234,12 @@ def build(entry):
             continue  # deleted in this commit
         if text == prev_text:
             continue
-        v = {"sha": sha, "date": date, "path": path}
+        v = {"sha": sha, "date": date, "path": path, "body": render(text)}
         if prev_text is None:
-            v.update(added=len(text.split()), removed=0, html=None)
+            v.update(added=len(text.split()), removed=0, html=None, changes=None)
         else:
             v["html"], v["added"], v["removed"] = compare(prev_text, text)
+            v["changes"] = block_changes(versions[-1]["body"], v["body"])
         versions.append(v)
         prev_text = text
     return versions

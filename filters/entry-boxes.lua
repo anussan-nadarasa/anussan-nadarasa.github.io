@@ -299,7 +299,7 @@ local function worklog_blocks(name)
 end
 
 -- Version-by-version comparison, prepared by scripts/versions.py.
-local function versions_blocks(repo)
+local function load_versions()
   local rel = relative_source_path()
   if not rel then return nil end
   local folder = rel:match("^entries/([^/]+)/index%.qmd$")
@@ -309,6 +309,71 @@ local function versions_blocks(repo)
   local versions = pandoc.json.decode(f:read("a"), false)
   f:close()
   if type(versions) ~= "table" or #versions == 0 then return nil end
+  return versions
+end
+
+-- Slider above the text: move it to read any earlier version, with an
+-- option to highlight what changed from the version before.
+local SLIDER_JS = [[
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var box = document.querySelector('.v-slider');
+  var body = document.getElementById('entry-body');
+  var src = document.getElementById('v-data');
+  if (!box || !body || !src) return;
+  var data = JSON.parse(src.textContent);
+  var n = data.length, current = body.innerHTML;
+  var range = box.querySelector('input[type=range]');
+  var label = box.querySelector('.v-label');
+  var toggle = box.querySelector('input[type=checkbox]');
+  var note = box.querySelector('.v-note');
+  var shown = null, timer = null;
+  function render() {
+    var i = +range.value - 1, latest = i === n - 1;
+    label.textContent = (latest ? 'Current version' : 'Version ' + (i + 1) + ' of ' + n) + ' \u00b7 ' + data[i].date;
+    toggle.disabled = i === 0;
+    toggle.parentNode.classList.toggle('v-off', i === 0);
+    var showChanges = toggle.checked && i > 0;
+    var html = showChanges ? data[i].changes : (latest ? current : data[i].body);
+    note.hidden = latest;
+    var key = i + ':' + showChanges;
+    if (key === shown) return;
+    shown = key;
+    body.style.opacity = 0;
+    clearTimeout(timer);
+    timer = setTimeout(function () { body.innerHTML = html; body.style.opacity = 1; }, 140);
+  }
+  range.addEventListener('input', render);
+  toggle.addEventListener('change', render);
+  render();
+});
+</script>
+]]
+
+local function slider_block(versions)
+  if #versions < 2 then return nil end
+  local items = {}
+  for _, v in ipairs(versions) do
+    table.insert(items, { date = nice_date(v.date), body = v.body or "", changes = v.changes or "" })
+  end
+  local json = pandoc.json.encode(items):gsub("</", "<\\/")
+  local n = #versions
+  local html = string.format([[
+<div class="v-slider">
+  <div class="v-row">
+    <label for="v-range" class="v-label">Current version</label>
+    <label class="v-toggle"><input type="checkbox"> Highlight changes from the previous version</label>
+  </div>
+  <input id="v-range" type="range" min="1" max="%d" step="1" value="%d" aria-label="Version">
+  <p class="v-note" hidden>An earlier version of the text below; the rest of the page is current. Slide right for the latest.</p>
+</div>
+<script type="application/json" id="v-data">%s</script>
+]], n, n, json)
+  return pandoc.RawBlock("html", html .. SLIDER_JS)
+end
+
+local function versions_blocks(repo, versions)
+  if not versions then return nil end
 
   local function when(iso) return nice_date(iso) end
   local h = {}
@@ -369,8 +434,10 @@ function Pandoc(doc)
 
   local repo = meta["history-repo"] and str(meta["history-repo"]) or ""
   if repo:find("YOUR%-GITHUB%-USERNAME") then repo = "" end
-  local vb = versions_blocks(repo)
+  local versions = load_versions()
+  local vb = versions_blocks(repo, versions)
   if vb then bottom:extend(vb) end
+  local slider = versions and slider_block(versions)
   local branch = meta["history-branch"] and str(meta["history-branch"]) or "main"
   local rel = relative_source_path()
   if repo ~= "" and not repo:find("YOUR%-GITHUB%-USERNAME") and rel then
@@ -385,7 +452,12 @@ function Pandoc(doc)
 
   local blocks = pandoc.Blocks({})
   blocks:extend(top)
-  blocks:extend(doc.blocks)
+  if slider then
+    blocks:insert(slider)
+    blocks:insert(pandoc.Div(doc.blocks, pandoc.Attr("entry-body")))
+  else
+    blocks:extend(doc.blocks)
+  end
   blocks:extend(bottom)
   doc.blocks = blocks
   return doc

@@ -34,7 +34,7 @@ Six decisions follow from that:
 - An automatic build on every push, with publishing to GitHub Pages started by hand (work logs excepted).
 - A nightly job in each private project that exports its work log and reflection fingerprints to this site.
 - Checks that a published fingerprint is never dropped or changed, and that every released reflection's label ("matches" or "revised") is correct.
-- A word-by-word comparison of every version of each entry, built from its git history.
+- A slider above each entry's text to read any earlier version, with an option to highlight what changed, and a word-by-word record of every change below it, both built from git history at build time.
 
 ## Next
 
