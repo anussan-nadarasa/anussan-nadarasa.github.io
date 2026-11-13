@@ -26,7 +26,7 @@ Four decisions follow from that:
 
 ## What was built
 
-- A [Quarto](https://quarto.org) website with separate Evidence and Essays listings and a feed.
+- A [Quarto](https://quarto.org) website with separate Evidence and Essays listings.
 - A filter that adds the AI-use box, the evidence links and a revision-history link to each entry.
 - Header validation and a patient-data scan, run before each commit and again during the online build.
 - An automatic build on every push, with publishing to GitHub Pages started by hand.
