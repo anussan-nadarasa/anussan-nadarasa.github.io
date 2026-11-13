@@ -15,7 +15,7 @@ listing:
   filter-ui: false
 ---
 
-This site is a public record of skills acquired in the age of generative artificial intelligence (AI). It holds two kinds of entry: [evidence](evidence.qmd), meaning projects, courses, papers and short logs, each with a statement of how generative AI was used; and [essays](essays.qmd), meaning reflective and occasional pieces. More about why it exists is on the [about page](about.qmd).
+A record of skills acquired in an age of generative artificial intelligence. More about why this site exists is on the [about page](about.qmd).
 
 ## Recently updated
 
