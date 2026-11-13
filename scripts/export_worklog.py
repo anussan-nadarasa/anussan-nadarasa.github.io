@@ -32,7 +32,9 @@ NAME; the site's checks reject any log that loses published fingerprints.
 YYYY-MM-DD.md (plain text; lines starting with # are ignored). A file
 DIR/.blocklist lists words or phrases, one per line, that would give the
 project away; a note containing any of them is held back and not exported.
-Notes may be edited or removed later; only commits are append-only.
+Notes may be edited or removed later; only commits are append-only. With
+--release or --public, the full versions in DIR/full/ (which may name the
+topic) replace the topic-free ones, day by day.
 
 A log whose commits have not changed is left untouched, so nothing is pushed
 on days without new work.
@@ -61,20 +63,34 @@ NOTE_FILE = re.compile(r"(\d{4}-\d{2}-\d{2})\.md")
 NOTE_MAX = 1200
 
 
-def read_notes(folder):
-    """Dated reflections, minus any that contain a blocked word or phrase."""
+def read_notes(folder, released=False):
+    """Dated reflections, minus any that contain a blocked word or phrase.
+
+    Once the project is public (--release or --public), the full versions in
+    DIR/full/YYYY-MM-DD.md replace the topic-free ones, and the blocklist no
+    longer applies."""
     block_file = folder / ".blocklist"
     blocked = []
-    if block_file.exists():
+    if block_file.exists() and not released:
         for line in block_file.read_text(encoding="utf-8").splitlines():
             w = line.strip()
             if w and not w.startswith("#"):
                 blocked.append(re.compile(r"(?<![\w-])" + re.escape(w) + r"(?:s|es)?(?![\w-])", re.I))
-    notes = []
+    files = {}
     for f in sorted(folder.iterdir()):
         m = NOTE_FILE.fullmatch(f.name)
-        if not m:
-            continue
+        if m:
+            files[m.group(1)] = f
+    full = folder / "full"
+    if released and full.is_dir():
+        for f in sorted(full.iterdir()):
+            m = NOTE_FILE.fullmatch(f.name)
+            if m:
+                files[m.group(1)] = f
+    notes = []
+    for day in sorted(files):
+        f = files[day]
+        m = NOTE_FILE.fullmatch(f.name)
         lines = [l.strip() for l in f.read_text(encoding="utf-8").splitlines()]
         text = " ".join(l for l in lines if l and not l.startswith("#") and not l.startswith("<!--"))
         if not text:
@@ -170,7 +186,7 @@ def main():
     if public:
         log["repo"] = public
     if notes_dir and notes_dir.is_dir():
-        notes = read_notes(notes_dir)
+        notes = read_notes(notes_dir, released=bool(public or release))
         if notes:
             log["notes"] = notes
     if release:
@@ -186,6 +202,11 @@ def main():
             old = json.loads(dest.read_text(encoding="utf-8"))
         except ValueError:
             old = None
+        if old and old.get("release") and not release:
+            # Released projects are final: the nightly job must not undo the
+            # release or bring back the topic-free reflections.
+            print(f"export_worklog.py: {name} has been released; {dest.relative_to(SITE)} left unchanged")
+            return
         if old:
             # Append-only: every fingerprint already published must still be
             # there, with the same time and contents fingerprint. Rewritten
