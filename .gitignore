@@ -4,6 +4,7 @@
 # Built site (the online build makes it; never commit it)
 /_site/
 /.quarto/
+/_versions/
 *_files/
 
 # Python / R / OS clutter

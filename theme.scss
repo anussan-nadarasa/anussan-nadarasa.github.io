@@ -51,3 +51,13 @@ h3 { font-size: 1.05rem; font-weight: 600; }
 .reflection { margin-bottom: 1rem; }
 .reflection-check { font-size: .85rem; color: #6b6b6b; }
 .reflection-check code { font-size: .8rem; }
+.versions-summary { margin-bottom: .5rem; }
+.versions-list { padding-left: 1.25rem; font-size: .95rem; }
+.versions-list li { margin-bottom: .4rem; }
+.versions-list summary { cursor: pointer; }
+.v-when { font-weight: 600; }
+.v-diff { white-space: pre-wrap; font-size: .85rem; line-height: 1.5; background: #f3f1ec; border-radius: 4px; padding: .6rem .75rem; margin: .4rem 0; overflow-wrap: anywhere; }
+.v-diff del, .versions-summary del { background: #f6d6d3; color: #7a1f17; text-decoration: line-through; }
+.v-diff ins, .versions-summary ins { background: #d5ecd6; color: #1d5b22; text-decoration: none; }
+.v-gap { color: #8a8a8a; padding: 0 .25rem; }
+.v-link { font-size: .85rem; margin: 0; }

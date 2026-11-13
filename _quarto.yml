@@ -1,7 +1,9 @@
 project:
   type: website
   output-dir: _site
-  pre-render: scripts/validate.py
+  pre-render:
+    - scripts/validate.py
+    - scripts/versions.py
   resources:
     - robots.txt
     - worklogs/*.json

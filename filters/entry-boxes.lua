@@ -298,6 +298,52 @@ local function worklog_blocks(name)
   return blocks
 end
 
+-- Version-by-version comparison, prepared by scripts/versions.py.
+local function versions_blocks(repo)
+  local rel = relative_source_path()
+  if not rel then return nil end
+  local folder = rel:match("^entries/([^/]+)/index%.qmd$")
+  if not folder then return nil end
+  local f = io.open(quarto.project.directory .. "/_versions/" .. folder .. ".json", "r")
+  if not f then return nil end
+  local versions = pandoc.json.decode(f:read("a"), false)
+  f:close()
+  if type(versions) ~= "table" or #versions == 0 then return nil end
+
+  local function when(iso) return nice_date(iso) .. ", " .. iso:sub(12, 16) end
+  local h = {}
+  local function add(s) table.insert(h, s) end
+  add('<div class="versions">')
+  if #versions == 1 then
+    add('<p class="versions-summary">One version, ' .. esc(when(versions[1].date)) .. '.</p>')
+  else
+    add(string.format('<p class="versions-summary">%d versions, from %s to %s. Each shows what changed from the one before: '
+      .. '<del>removed</del>, <ins>added</ins>.</p>', #versions, esc(nice_date(versions[1].date)),
+      esc(nice_date(versions[#versions].date))))
+  end
+  add('<ol class="versions-list" reversed>')
+  for i = #versions, 1, -1 do
+    local v = versions[i]
+    local link = ""
+    if repo ~= "" then
+      link = ' · <a href="' .. esc(repo .. "/blob/" .. v.sha .. "/" .. v.path) .. '">this version</a>'
+    end
+    if v.html == nil or v.html == pandoc.json.null then
+      add(string.format('<li><span class="v-when">%s</span> · first version, %d words%s</li>',
+        esc(when(v.date)), v.added, link))
+    else
+      add(string.format('<li><details><summary><span class="v-when">%s</span> · +%d / −%d words</summary>'
+        .. '<div class="v-diff">%s</div><p class="v-link">%s</p></details></li>',
+        esc(when(v.date)), v.added, v.removed, v.html, link:gsub("^ · ", "")))
+    end
+  end
+  add('</ol></div>')
+  return pandoc.Blocks({
+    pandoc.Header(2, "Versions", pandoc.Attr("versions")),
+    pandoc.RawBlock("html", table.concat(h, "\n")),
+  })
+end
+
 function Pandoc(doc)
   local meta = doc.meta
   if not meta.type then return nil end -- not an entry
@@ -321,6 +367,9 @@ function Pandoc(doc)
   if ev then bottom:extend(ev) end
 
   local repo = meta["history-repo"] and str(meta["history-repo"]) or ""
+  if repo:find("YOUR%-GITHUB%-USERNAME") then repo = "" end
+  local vb = versions_blocks(repo)
+  if vb then bottom:extend(vb) end
   local branch = meta["history-branch"] and str(meta["history-branch"]) or "main"
   local rel = relative_source_path()
   if repo ~= "" and not repo:find("YOUR%-GITHUB%-USERNAME") and rel then
