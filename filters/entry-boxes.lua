@@ -225,15 +225,74 @@ local function worklog_blocks(name)
     pandoc.RawBlock("html", table.concat(h, "\n")),
   })
 
-  -- Short dated reflections written in the project, newest first.
-  local notes = log.notes or {}
-  if #notes > 0 then
+  -- Reflections: public notes, plus fingerprints of the full reflections
+  -- (texts appear at release). One list, newest first.
+  local items = {}
+  for _, n in ipairs(log.notes or {}) do
+    table.insert(items, { date = n.date, kind = "note", n = n })
+  end
+  for _, r in ipairs(log.reflections or {}) do
+    table.insert(items, { date = r.date, kind = "refl", r = r })
+  end
+  table.sort(items, function(a, b)
+    if a.date == b.date then return a.kind > b.kind end
+    return a.date > b.date
+  end)
+  local function words(s)
+    local lines = {}
+    for line in (s .. "\n"):gmatch("(.-)\n") do
+      local t = line:gsub("^%s+", ""):gsub("%s+$", "")
+      if t ~= "" and not t:match("^#") and not t:match("^<!%-%-") then table.insert(lines, t) end
+    end
+    return pandoc.Inlines(table.concat(lines, " "))
+  end
+  local function short(h) return h:sub(1, 12) .. "…" .. h:sub(-4) end
+  local function small(inl) return pandoc.Para({ pandoc.Span(inl, pandoc.Attr("", { "reflection-check" })) }) end
+
+  if #items > 0 then
     blocks:insert(pandoc.Header(3, "Reflections", pandoc.Attr("reflections")))
-    for i = #notes, 1, -1 do
-      local n = notes[i]
-      local inl = pandoc.Inlines({ pandoc.Strong(nice_date(n.date .. "T00:00:00Z")), pandoc.Str("."), pandoc.Space() })
-      inl:extend(pandoc.Inlines(n.text))
-      blocks:insert(pandoc.Div({ pandoc.Para(inl) }, pandoc.Attr("", { "reflection" })))
+    for _, it in ipairs(items) do
+      local head = pandoc.Inlines({ pandoc.Strong(nice_date(it.date .. "T00:00:00Z") .. "."), pandoc.Space() })
+      local body = pandoc.Blocks({})
+      if it.kind == "note" then
+        head:extend(words(it.n.text))
+        body:insert(pandoc.Para(head))
+      else
+        local r = it.r
+        local fps = r.fingerprints or {}
+        local first = fps[1]
+        local when = r.published and nice_date(r.published .. "T00:00:00Z") or ""
+        if r.text == nil then
+          if log.release or log.source == "public" then
+            head:extend(pandoc.Inlines("Reflection written; not released."))
+          else
+            head:extend(pandoc.Inlines("Reflection written; text published at release."))
+          end
+          body:insert(pandoc.Para(head))
+          if first then
+            body:insert(small(pandoc.Inlines({ pandoc.Str("Fingerprint "), pandoc.Code(short(first), pandoc.Attr("", {}, { title = first })),
+              pandoc.Str(", published " .. when .. ".") })))
+          end
+        else
+          if r.match == "revised" then head:insert(pandoc.Emph("(revised)")); head:insert(pandoc.Space()) end
+          head:extend(words(r.text))
+          body:insert(pandoc.Para(head))
+          if r.match == "verified" then
+            body:insert(small(pandoc.Inlines("✓ Matches the fingerprint published " .. when .. ".")))
+          elseif r.match == "revised" then
+            if r.original then
+              local o = pandoc.Inlines("Original, matching the fingerprint published " .. when .. ": ")
+              o:extend(words(r.original))
+              body:insert(small(o))
+            else
+              body:insert(small(pandoc.Inlines("Revised after " .. when .. "; the original version is not available.")))
+            end
+          else
+            body:insert(small(pandoc.Inlines("Written after the last fingerprint was published; no earlier record.")))
+          end
+        end
+      end
+      blocks:insert(pandoc.Div(body, pandoc.Attr("", { "reflection" })))
     end
   end
   return blocks

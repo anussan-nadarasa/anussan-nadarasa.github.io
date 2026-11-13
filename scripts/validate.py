@@ -145,7 +145,7 @@ def check_worklog(path: Path):
     if not isinstance(log, dict):
         return ["must be a JSON object"]
     source = log.get("source")
-    allowed = {"name", "source", "exported", "commits", "notes"} | ({"repo"} if source == "public" else {"release"})
+    allowed = {"name", "source", "exported", "commits", "notes", "reflections"} | ({"repo"} if source == "public" else {"release"})
     extra = set(log) - allowed
     if extra:
         errors.append(f"unexpected fields: {', '.join(sorted(extra))}")
@@ -189,6 +189,38 @@ def check_worklog(path: Path):
                     errors.append(f"note {i}: `date` must be YYYY-MM-DD")
                 if not isinstance(n["text"], str) or not n["text"].strip() or len(n["text"]) > 1200:
                     errors.append(f"note {i}: `text` must be 1 to 1200 characters")
+    refl = log.get("reflections")
+    if refl is not None:
+        import hashlib
+        released = source == "public" or log.get("release") is not None
+        if not isinstance(refl, list):
+            errors.append("`reflections` must be a list")
+            refl = []
+        for i, r in enumerate(refl):
+            if not isinstance(r, dict):
+                errors.append(f"reflection {i} is not an object"); continue
+            keys = {"date", "published", "fingerprints"} | ({"text", "original", "match"} if released else set())
+            extra = set(r) - keys
+            if extra:
+                errors.append(f"reflection {i}: unexpected fields {', '.join(sorted(extra))}"
+                              + ("" if released else " (texts are only published at release)"))
+            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(r.get("date", ""))):
+                errors.append(f"reflection {i}: `date` must be YYYY-MM-DD")
+            fps = r.get("fingerprints")
+            if not isinstance(fps, list) or not all(re.fullmatch(r"[0-9a-f]{64}", str(h)) for h in fps):
+                errors.append(f"reflection {i}: `fingerprints` must be a list of SHA-256 hashes"); continue
+            if fps and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(r.get("published", ""))):
+                errors.append(f"reflection {i}: `published` must be YYYY-MM-DD")
+            if not fps and "text" not in r:
+                errors.append(f"reflection {i}: has neither fingerprints nor text")
+            if "text" in r:
+                h = hashlib.sha256(str(r["text"]).encode("utf-8")).hexdigest()
+                expect = "new" if not fps else ("verified" if h == fps[0] else "revised")
+                if r.get("match") != expect:
+                    errors.append(f"reflection {i}: `match` must be {expect}")
+            if "original" in r:
+                if not fps or hashlib.sha256(str(r["original"]).encode("utf-8")).hexdigest() != fps[0]:
+                    errors.append(f"reflection {i}: `original` does not match the first published fingerprint")
     rel = log.get("release")
     if rel is not None:
         if not isinstance(rel, dict) or set(rel) != {"repo", "commit", "tree"}:
@@ -227,6 +259,13 @@ def check_worklog_history(path: Path):
         pass
     errors = []
     for (a_id, a), (b_id, b) in zip(versions, versions[1:]):
+        b_refl = {r.get("date"): r.get("fingerprints", []) for r in b.get("reflections", []) if isinstance(r, dict)}
+        for r in a.get("reflections", []):
+            fps = r.get("fingerprints", []) if isinstance(r, dict) else []
+            if fps and b_refl.get(r.get("date"), [])[:len(fps)] != fps:
+                errors.append(f"version {b_id} dropped or changed the published fingerprint of reflection "
+                              f"{r.get('date')} (present in {a_id}); fingerprints only grow")
+                break
         b_map = {c.get("sha"): c for c in b.get("commits", []) if isinstance(c, dict)}
         for c in a.get("commits", []):
             n = b_map.get(c.get("sha"))

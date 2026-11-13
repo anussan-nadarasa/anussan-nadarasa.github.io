@@ -28,13 +28,18 @@ already been published (for example after a force-push in the project).
 If a project's history really had to be rewritten, export it under a new
 NAME; the site's checks reject any log that loses published fingerprints.
 
---notes DIR: short reflections written in the project, one file per day named
-YYYY-MM-DD.md (plain text; lines starting with # are ignored). A file
-DIR/.blocklist lists words or phrases, one per line, that would give the
-project away; a note containing any of them is held back and not exported.
-Notes may be edited or removed later; only commits are append-only. With
---release or --public, the full versions in DIR/full/ (which may name the
-topic) replace the topic-free ones, day by day.
+--notes DIR: reflections written in the project, one file per day.
+  DIR/full/YYYY-MM-DD.md  the full reflection, which may name the topic. While
+      the project is private only its fingerprint (SHA-256 of the file's exact
+      bytes) and the date it was first published leave the project. Every
+      fingerprint ever published is kept, so later edits are visible.
+  DIR/YYYY-MM-DD.md       optional public note (a milestone), published as
+      written, topic-free. DIR/.blocklist lists words or phrases that would
+      give the project away; a note containing any of them is held back.
+  With --release or --public, each full reflection's text is published with
+  its fingerprints. If it was edited after its first fingerprint, the
+  original version is recovered from the project's git history and
+  published alongside it, so both can be checked.
 
 A log whose commits have not changed is left untouched, so nothing is pushed
 on days without new work.
@@ -45,6 +50,7 @@ patient data and anything sensitive out of the project's git history from
 the start (the project starter does this), so that it can be.
 """
 
+import hashlib
 import json
 import re
 import subprocess
@@ -63,47 +69,99 @@ NOTE_FILE = re.compile(r"(\d{4}-\d{2}-\d{2})\.md")
 NOTE_MAX = 1200
 
 
-def read_notes(folder, released=False):
-    """Dated reflections, minus any that contain a blocked word or phrase.
-
-    Once the project is public (--release or --public), the full versions in
-    DIR/full/YYYY-MM-DD.md replace the topic-free ones, and the blocklist no
-    longer applies."""
+def read_notes(folder):
+    """Optional public notes (DIR/YYYY-MM-DD.md), minus any containing a
+    blocked word or phrase."""
     block_file = folder / ".blocklist"
     blocked = []
-    if block_file.exists() and not released:
+    if block_file.exists():
         for line in block_file.read_text(encoding="utf-8").splitlines():
             w = line.strip()
             if w and not w.startswith("#"):
                 blocked.append(re.compile(r"(?<![\w-])" + re.escape(w) + r"(?:s|es)?(?![\w-])", re.I))
-    files = {}
+    notes = []
     for f in sorted(folder.iterdir()):
         m = NOTE_FILE.fullmatch(f.name)
-        if m:
-            files[m.group(1)] = f
-    full = folder / "full"
-    if released and full.is_dir():
-        for f in sorted(full.iterdir()):
-            m = NOTE_FILE.fullmatch(f.name)
-            if m:
-                files[m.group(1)] = f
-    notes = []
-    for day in sorted(files):
-        f = files[day]
-        m = NOTE_FILE.fullmatch(f.name)
+        if not m or not f.is_file():
+            continue
         lines = [l.strip() for l in f.read_text(encoding="utf-8").splitlines()]
         text = " ".join(l for l in lines if l and not l.startswith("#") and not l.startswith("<!--"))
         if not text:
             continue
-        hits = [p.pattern for p in blocked if p.search(text)]
-        if hits:
-            print(f"export_worklog.py: reflection {m.group(1)} held back (contains a blocked word)")
+        if any(p.search(text) for p in blocked):
+            print(f"export_worklog.py: note {m.group(1)} held back (contains a blocked word)")
             continue
         if len(text) > NOTE_MAX:
-            print(f"export_worklog.py: reflection {m.group(1)} held back (longer than {NOTE_MAX} characters)")
+            print(f"export_worklog.py: note {m.group(1)} held back (longer than {NOTE_MAX} characters)")
             continue
         notes.append({"date": m.group(1), "text": text})
     return notes
+
+
+def sha256(b):
+    return hashlib.sha256(b).hexdigest()
+
+
+def find_version(project, relpath, digest):
+    """Text of the version of relpath in the project's history whose
+    fingerprint is digest, or None."""
+    try:
+        shas = subprocess.check_output(["git", "-C", str(project), "log", "--all", "--format=%H", "--", relpath],
+                                       text=True).split()
+    except subprocess.CalledProcessError:
+        return None
+    for c in shas:
+        try:
+            blob = subprocess.check_output(["git", "-C", str(project), "show", f"{c}:{relpath}"])
+        except subprocess.CalledProcessError:
+            continue
+        if sha256(blob) == digest:
+            return blob.decode("utf-8")
+    return None
+
+
+def reflections(project, folder, old, released, today):
+    """Fingerprints of the full reflections (private), or their texts with
+    fingerprints (released). `old` is the previous log's list."""
+    prev = {r["date"]: r for r in (old or [])}
+    full = folder / "full"
+    files = {}
+    if full.is_dir():
+        for f in sorted(full.iterdir()):
+            m = NOTE_FILE.fullmatch(f.name)
+            if m and f.is_file():
+                files[m.group(1)] = f
+    out = []
+    for day in sorted(set(prev) | set(files)):
+        p = prev.get(day, {})
+        fps = list(p.get("fingerprints", []))
+        published = p.get("published", today)
+        r = {"date": day, "published": published, "fingerprints": fps}
+        f = files.get(day)
+        if f is not None:
+            data = f.read_bytes()
+            h = sha256(data)
+            if not released:
+                if h not in fps:
+                    fps.append(h)
+            else:
+                if len(data) > 4 * NOTE_MAX:
+                    die(f"reflection {day} is longer than {4 * NOTE_MAX} characters")
+                r["text"] = data.decode("utf-8")
+                r["match"] = "new" if not fps else ("verified" if h == fps[0] else "revised")
+                if fps and h != fps[0]:
+                    rel = f.relative_to(project).as_posix()
+                    orig = find_version(project, rel, fps[0])
+                    if orig is not None:
+                        r["original"] = orig
+                    else:
+                        print(f"export_worklog.py: reflection {day}: original version not found in history")
+        if not r["fingerprints"] and not released:
+            continue
+        if not r["fingerprints"]:
+            del r["published"]  # written after the last private export
+        out.append(r)
+    return out
 
 
 def main():
@@ -185,26 +243,34 @@ def main():
     }
     if public:
         log["repo"] = public
+    dest = SITE / "worklogs" / f"{name}.json"
+    old = None
+    if dest.exists():
+        try:
+            old = json.loads(dest.read_text(encoding="utf-8"))
+        except ValueError:
+            old = None
     if notes_dir and notes_dir.is_dir():
-        notes = read_notes(notes_dir, released=bool(public or release))
+        notes = read_notes(notes_dir)
         if notes:
             log["notes"] = notes
+        refl = reflections(project, notes_dir, (old or {}).get("reflections"),
+                           bool(public or release), log["exported"][:10])
+        if refl:
+            log["reflections"] = refl
+    elif old and old.get("reflections"):
+        log["reflections"] = old["reflections"]  # never drop published fingerprints
     if release:
         if release["tree"] not in {c["tree"] for c in commits}:
             die("the public release's contents do not match any tracked commit. Publish exactly "
                 "the files of a private commit (usually the last one), then export again.")
         log["release"] = release
 
-    dest = SITE / "worklogs" / f"{name}.json"
     dest.parent.mkdir(exist_ok=True)
     if dest.exists():
-        try:
-            old = json.loads(dest.read_text(encoding="utf-8"))
-        except ValueError:
-            old = None
         if old and old.get("release") and not release:
             # Released projects are final: the nightly job must not undo the
-            # release or bring back the topic-free reflections.
+            # release or hide the released reflections again.
             print(f"export_worklog.py: {name} has been released; {dest.relative_to(SITE)} left unchanged")
             return
         if old:
