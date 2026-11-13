@@ -2,8 +2,8 @@ name: Build and publish
 
 # Every push runs the checks and builds the site, but nothing goes live until
 # you press "Run workflow" on the Actions tab (Build and publish > Run workflow).
-# To publish automatically on every push instead, delete the `if:` line in
-# the deploy job below.
+# One exception: a push that only adds to work logs (worklogs/*.json) goes
+# live by itself, but only if nothing else has changed since the live version.
 on:
   push:
     branches: [main]
@@ -13,14 +13,17 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  deployments: read
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      auto: ${{ steps.auto.outputs.publish }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,6 +37,13 @@ jobs:
 
       - name: Scan for patient-identifiable data
         run: python3 scripts/check_pii.py
+
+      - name: Check whether only work logs changed since the live version
+        id: auto
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/only_worklogs.py
 
       - name: Set file dates from git history
         run: python3 scripts/restore_mtime.py
@@ -50,7 +60,7 @@ jobs:
 
   deploy:
     needs: build
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || needs.build.outputs.auto == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
