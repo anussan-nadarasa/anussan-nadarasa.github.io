@@ -3,11 +3,11 @@
 Builds the version-by-version comparison shown at the foot of each entry.
 
 For every entries/*/index.qmd, reads the file's committed history (following
-renames) and writes _versions/FOLDER.json: one item per distinct version,
+renames) and writes _versions/FOLDER.json: one item per version whose text
+(the body, not the header) changed,
 oldest first, with
-  - its commit, date, and the number of words added and removed;
-  - `html`: a word-level comparison of the whole file (header included) with
-    the previous version, for the full record of changes;
+  - its commit, date, and the number of words of text added and removed;
+  - `html`: a word-level comparison of the text with the previous version;
   - `body`: the version's text rendered to HTML, for the slider;
   - `changes`: that text with the paragraphs added since the previous version
     highlighted and those removed struck through.
@@ -225,23 +225,28 @@ def list_changes(old, new):
 
 
 def build(entry):
+    """Versions of the entry's text (the body, without the header), oldest
+    first. A commit that changed only the header or the statement of AI use
+    does not count as a new version here, and word counts cover the text
+    alone, so the timeline matches exactly what it shows."""
     rel = entry.relative_to(ROOT).as_posix()
-    versions, prev_text = [], None
+    versions, prev_body = [], None
     for sha, date, path in reversed(history(rel)):
         try:
             text = git("show", f"{sha}:{path}", binary=True).decode("utf-8", "replace")
         except subprocess.CalledProcessError:
             continue  # deleted in this commit
-        if text == prev_text:
+        body = FRONT.sub("", text, count=1).strip()
+        if body == prev_body:
             continue
         v = {"sha": sha, "date": date, "path": path, "body": render(text)}
-        if prev_text is None:
-            v.update(added=len(text.split()), removed=0, html=None, changes=None)
+        if prev_body is None:
+            v.update(added=len(body.split()), removed=0, html=None, changes=None)
         else:
-            v["html"], v["added"], v["removed"] = compare(prev_text, text)
+            v["html"], v["added"], v["removed"] = compare(prev_body, body)
             v["changes"] = block_changes(versions[-1]["body"], v["body"])
         versions.append(v)
-        prev_text = text
+        prev_body = body
     return versions
 
 
