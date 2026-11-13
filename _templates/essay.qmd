@@ -7,7 +7,7 @@ type: essay
 description: "One sentence shown in the essays list."
 # Optional:
 # categories: [reflection]   # add skills only if the essay evidences one
-# ai: none                   # or the tools/did/me block, if AI was involved
+# ai: none                   # optional for essays
 ---
 
 Write here.

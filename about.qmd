@@ -10,4 +10,4 @@ Several principles of the publishing pipeline are unabashedly borrowed from the 
 
 ## How the website works
 
-Every entry is a plain-text file in a public [git repository](https://github.com/anussan-nadarasa/anussan-nadarasa.github.io). Each entry page links to its own revision history, so it is possible to see when it was first written and how it changed. Each entry also states which generative AI tools were used, what they did, and what was done and checked by hand (see [AI use](ai-policy.qmd)).
+Every entry is a plain-text file in a public [git repository](https://github.com/anussan-nadarasa/anussan-nadarasa.github.io). Each entry page links to its own revision history, so it is possible to see when it was first written and how it changed. Each evidence entry also states which generative AI tools were used, what they did, and what was done and checked by hand (see [AI use](ai-policy.qmd)).
