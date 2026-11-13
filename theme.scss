@@ -33,3 +33,17 @@ h3 { font-size: 1.05rem; font-weight: 600; }
   display: inline-block; font-size: .75rem; letter-spacing: .03em;
   padding: .05rem .45rem; border: 1px solid #cfccc3; border-radius: 3px; color: #5b5a55;
 }
+
+// Work log panel (filters/entry-boxes.lua)
+.worklog-summary { margin-bottom: .5rem; }
+.worklog-chart { width: 100%; height: 56px; display: block; margin: .25rem 0 .75rem; }
+.worklog-chart rect.full { fill: #1f4e79; }
+.worklog-chart rect.empty { fill: #dcd8cf; }
+.worklog details summary { cursor: pointer; font-size: .95rem; margin-bottom: .5rem; }
+.worklog-table { font-size: .85rem; width: 100%; }
+.worklog-table td, .worklog-table th { padding: .2rem .4rem; vertical-align: top; }
+.worklog-table code { font-size: .8rem; background: none; padding: 0; }
+.worklog-note { font-size: .85rem; color: #5b5a55; margin-top: .5rem; }
+.worklog-release { font-size: .9rem; background: #eef3f8; border: 1px solid #cfdcea; border-radius: 4px; padding: .5rem .75rem; }
+.worklog-release code { font-size: .8rem; background: none; padding: 0; }
+.worklog-tag { font-size: .7rem; border: 1px solid #1f4e79; color: #1f4e79; border-radius: 3px; padding: 0 .3rem; margin-left: .25rem; }

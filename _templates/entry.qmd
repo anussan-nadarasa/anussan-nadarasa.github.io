@@ -15,6 +15,7 @@ ai:
   tools: [Claude Opus 5.5]          # or write  ai: none
   did: "What the AI produced or helped with."
   me: "What was decided and done by hand, and how the AI output was checked."
+# worklog: project-name  # optional: commits from the project's own repository
 ---
 
 Write the entry here. Code chunks work:

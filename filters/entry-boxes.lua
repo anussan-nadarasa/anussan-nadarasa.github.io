@@ -16,6 +16,7 @@ Front matter it reads:
     did: What the AI did.
     me: What you did and how you checked it.
   # or simply:  ai: none
+  worklog: project-name    # optional: worklogs/project-name.json, from scripts/export_worklog.py
 ]]
 
 local str = pandoc.utils.stringify
@@ -97,6 +98,134 @@ local function relative_source_path()
   return (rel:gsub("\\", "/"))
 end
 
+-- ---------------------------------------------------------------------------
+-- Work log: rendered from worklogs/<name>.json (made by scripts/export_worklog.py)
+-- ---------------------------------------------------------------------------
+
+local function esc(s)
+  return (tostring(s):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;"))
+end
+
+local function day_number(iso)
+  local y, m, d = iso:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)")
+  return math.floor(os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 12 }) / 86400)
+end
+
+local MONTHS = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" }
+local function nice_date(iso)
+  local y, m, d = iso:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)")
+  return tonumber(d) .. " " .. MONTHS[tonumber(m)] .. " " .. y
+end
+
+local function weekly_chart(commits, first_day, n_weeks)
+  local counts = {}
+  for i = 1, n_weeks do counts[i] = 0 end
+  local max = 1
+  for _, c in ipairs(commits) do
+    local w = math.floor((day_number(c.date) - first_day) / 7) + 1
+    counts[w] = (counts[w] or 0) + 1
+    if counts[w] > max then max = counts[w] end
+  end
+  local width, height = 640, 56
+  local bw = math.min(width / n_weeks, 28)
+  local parts = { string.format(
+    '<svg class="worklog-chart" viewBox="0 0 %d %d" preserveAspectRatio="none" role="img" aria-label="Commits per week">',
+    width, height) }
+  for i = 1, n_weeks do
+    local h = counts[i] == 0 and 1 or math.max(3, (counts[i] / max) * (height - 4))
+    table.insert(parts, string.format(
+      '<rect x="%.2f" y="%.2f" width="%.2f" height="%.2f" class="%s"><title>Week %d: %d commit%s</title></rect>',
+      (i - 1) * bw + 1, height - h, math.max(bw - 2, 1), h, counts[i] == 0 and "empty" or "full",
+      i, counts[i], counts[i] == 1 and "" or "s"))
+  end
+  table.insert(parts, "</svg>")
+  return table.concat(parts)
+end
+
+local function worklog_blocks(name)
+  if not (quarto and quarto.project and quarto.project.directory) then return nil end
+  local path = quarto.project.directory .. "/worklogs/" .. name .. ".json"
+  local f = io.open(path, "r")
+  if not f then
+    error("Work log not found: worklogs/" .. name .. ".json (run scripts/export_worklog.py)")
+  end
+  local log = pandoc.json.decode(f:read("a"), false)
+  f:close()
+
+  local commits = log.commits or {}
+  if #commits == 0 then return nil end
+  local is_public = log.source == "public" and log.repo
+
+  local files, added, deleted = 0, 0, 0
+  local active_days = {}
+  for _, c in ipairs(commits) do
+    files = files + c.files; added = added + c.added; deleted = deleted + c.deleted
+    active_days[c.date:sub(1, 10)] = true
+  end
+  local n_days = 0
+  for _ in pairs(active_days) do n_days = n_days + 1 end
+  local first_day = day_number(commits[1].date)
+  local n_weeks = math.floor((day_number(commits[#commits].date) - first_day) / 7) + 1
+
+  local h = {}
+  local function add(s) table.insert(h, s) end
+  add('<div class="worklog">')
+  add(string.format(
+    '<p class="worklog-summary"><strong>%d commit%s</strong> on %d day%s across %d week%s, %s to %s. ' ..
+    '%d file changes, %d lines added, %d removed.</p>',
+    #commits, #commits == 1 and "" or "s", n_days, n_days == 1 and "" or "s",
+    n_weeks, n_weeks == 1 and "" or "s",
+    nice_date(commits[1].date), nice_date(commits[#commits].date),
+    math.floor(files), math.floor(added), math.floor(deleted)))
+  add(weekly_chart(commits, first_day, n_weeks))
+
+  local rel = log.release
+  local rel_index = nil
+  if rel and rel.tree then
+    for i, c in ipairs(commits) do
+      if c.tree == rel.tree then rel_index = i end
+    end
+  end
+  if rel and rel_index then
+    local rc = commits[rel_index]
+    local repo_name = esc((rel.repo:gsub("^https://github.com/", "")))
+    add(string.format(
+      '<p class="worklog-release"><strong>Public release:</strong> <a href="%s">%s</a>. ' ..
+      'Its contents are identical to tracked commit %d of %d (%s): both have the contents fingerprint ' ..
+      '<code title="%s">%s</code>. To check, run <code>git rev-parse HEAD^{tree}</code> in a copy of the public repository.</p>',
+      esc(rel.repo), repo_name, rel_index, #commits, nice_date(rc.date),
+      esc(rel.tree), esc(rel.tree:sub(1, 10))))
+  end
+  add(string.format('<details><summary>All %d commits</summary>', #commits))
+  add('<table class="worklog-table"><thead><tr><th>Date (UTC)</th><th>Fingerprint</th>' ..
+      (is_public and '<th>Message</th>' or '') .. '<th>Files</th><th>Lines</th></tr></thead><tbody>')
+  for i = #commits, 1, -1 do
+    local c = commits[i]
+    local fp = '<code title="' .. esc(c.sha) .. '">' .. esc(c.sha:sub(1, 10)) .. '</code>'
+    if is_public then fp = '<a href="' .. esc(log.repo) .. '/commit/' .. esc(c.sha) .. '">' .. fp .. '</a>' end
+    if rel_index == i then fp = fp .. ' <span class="worklog-tag">released</span>' end
+    add(string.format('<tr><td>%s %s</td><td>%s</td>%s<td>%d</td><td>+%d / −%d</td></tr>',
+      esc(c.date:sub(1, 10)), esc(c.date:sub(12, 16)), fp,
+      is_public and ('<td>' .. esc(c.message or "") .. '</td>') or "",
+      math.floor(c.files), math.floor(c.added), math.floor(c.deleted)))
+  end
+  add('</tbody></table></details>')
+  if is_public then
+    add('<p class="worklog-note">From the public repository <a href="' .. esc(log.repo) .. '">' ..
+        esc(log.repo:gsub("^https://github.com/", "")) .. '</a>. Each fingerprint links to that commit.</p>')
+  else
+    add('<p class="worklog-note">From a private repository: dates, sizes and fingerprints only. ' ..
+        'Each fingerprint is the commit\'s full hash, so the history can be checked against it ' ..
+        'if the repository is made public. <a href="../../worklogs/' .. esc(name) .. '.json">Download the log</a>.</p>')
+  end
+  add('</div>')
+
+  return pandoc.Blocks({
+    pandoc.Header(2, "Work log", pandoc.Attr("work-log")),
+    pandoc.RawBlock("html", table.concat(h, "\n")),
+  })
+end
+
 function Pandoc(doc)
   local meta = doc.meta
   if not meta.type then return nil end -- not an entry
@@ -111,6 +240,10 @@ function Pandoc(doc)
   end
 
   local bottom = pandoc.Blocks({})
+  if meta.worklog then
+    local wl = worklog_blocks(str(meta.worklog))
+    if wl then bottom:extend(wl) end
+  end
   local ev = evidence_list(meta.evidence)
   if ev then bottom:extend(ev) end
 
@@ -120,7 +253,7 @@ function Pandoc(doc)
   if repo ~= "" and not repo:find("YOUR%-GITHUB%-USERNAME") and rel then
     bottom:insert(pandoc.Div({
       pandoc.Para({
-        pandoc.Link("Revision history", repo .. "/commits/" .. branch .. "/" .. rel),
+        pandoc.Link("Write-up history", repo .. "/commits/" .. branch .. "/" .. rel),
         pandoc.Str(" · "),
         pandoc.Link("Source", repo .. "/blob/" .. branch .. "/" .. rel),
       })

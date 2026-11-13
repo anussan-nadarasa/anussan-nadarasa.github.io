@@ -4,6 +4,7 @@ project:
   pre-render: scripts/validate.py
   resources:
     - robots.txt
+    - worklogs/*.json
 
 # ---------------------------------------------------------------------------
 # Site name and URLs.

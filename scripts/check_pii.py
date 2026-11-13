@@ -23,6 +23,7 @@ Usage
                                           (used by the pre-commit hook)
 """
 
+import fnmatch
 import re
 import subprocess
 import sys
@@ -36,6 +37,8 @@ DATA_EXT = {".csv", ".tsv", ".xls", ".xlsx", ".sav", ".dta", ".sas7bdat", ".rds"
             ".rdata", ".rda", ".parquet", ".feather", ".sqlite", ".db",
             ".dcm", ".dicom", ".nii", ".gz", ".edf", ".hl7"}
 SKIP_DIRS = {"_site", ".quarto", "node_modules"}
+# Work logs hold only hashes and numbers; validate.py enforces that strictly.
+SCHEMA_CHECKED = ("worklogs/",)
 
 NHS_RE = re.compile(r"(?<![\d.])(\d{3})[ -]?(\d{3})[ -]?(\d{4})(?![\d.])")
 DOB_RE = re.compile(r"\b(?:DOB|D\.O\.B\.?|date\s+of\s+birth)\b\W{0,3}\d{1,4}[/\-. ]\d{1,2}", re.I)
@@ -85,10 +88,13 @@ def main():
 
     for name in files_to_scan(staged):
         ext = Path(name).suffix.lower()
-        if ext in DATA_EXT and name not in allow:
+        allowed = any(fnmatch.fnmatch(name, pat) for pat in allow)
+        if ext in DATA_EXT and not allowed:
             problems.append((name, 0, f"data/imaging file ({ext}). If it is safe, add its path to .pii-allow"))
             continue
-        if ext not in TEXT_EXT:
+        if ext in DATA_EXT and ext not in (".csv", ".tsv"):
+            continue
+        if ext not in TEXT_EXT | {".csv", ".tsv"} or name.startswith(SCHEMA_CHECKED):
             continue
         for i, line in enumerate(read(name, staged).splitlines(), 1):
             if "pii-ok" in line:
