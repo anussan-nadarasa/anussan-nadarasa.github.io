@@ -17,4 +17,4 @@ listing:
     categories: "Skills"
 ---
 
-Each entry states what generative artificial intelligence (AI) did and what was done and checked by hand. Select a skill to filter.
+Select a skill to filter.

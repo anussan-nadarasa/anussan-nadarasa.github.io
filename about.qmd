@@ -2,7 +2,7 @@
 title: "About"
 ---
 
-This website is a public record of skill acquisition in an age of generative artificial intelligence (AI), kept as a personal reference and available for anyone to view. Entries are either evidence (projects, courses, papers and short logs, each stating how generative AI was used) or essays (reflective and occasional pieces).
+This website is a record of skill development for desk-based medical research, kept as a personal reference and available for anyone to view. Entries are either evidence (projects, courses, papers and short logs, each stating how generative artificial intelligence (AI) was used) or essays (reflective and occasional pieces).
 
 It arises from a conversation with Prof Pearse Keane (Professor of Artificial Medical Intelligence at the UCL Institute of Ophthalmology) about meaningful methods of acquiring skills for medical research, and from subsequent reflection on how such skills can be demonstrated now that submission-ready output can be produced by generative AI.
 
