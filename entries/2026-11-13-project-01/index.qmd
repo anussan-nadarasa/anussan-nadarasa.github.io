@@ -3,10 +3,7 @@ title: "Research project in progress"
 date: 2026-11-13
 type: log
 description: "Details will be published when the project is complete."
-ai:
-  tools: [Claude Opus 5.5]
-  did: "Assists with searching, drafting and checking. A full account will be published with the project."
-  me: "Sets the question and methods, makes every decision and checks all output. Key steps are done independently by two people."
+ai: pending
 worklog: project-01
 ---
 

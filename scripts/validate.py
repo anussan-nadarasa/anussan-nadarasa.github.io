@@ -12,7 +12,8 @@ Rules
   log, reflection  `ai` required; skills recommended
   project, course,
   paper            `ai`, at least one skill and at least one evidence link
-  `ai`             either `none` or a block with non-empty `did` and `me`
+  `ai`             `none`, a block with non-empty `did` and `me`, or `pending`
+                   (in-progress projects with a `worklog`; no statement shown yet)
   skills           must appear in skills.yml (warning otherwise)
   worklog          must point to an existing worklogs/NAME.json; every work
                    log must match a strict schema (private logs: hashes,
@@ -94,7 +95,10 @@ def check(path: Path, skills):
         if ai is None:
             errors.append("missing `ai` block (write `ai: none` if no AI was used)")
         elif isinstance(ai, str):
-            if ai.strip().lower() != "none":
+            if ai.strip().lower() == "pending":
+                if not fm.get("worklog"):
+                    errors.append("`ai: pending` is only for in-progress projects with a `worklog`")
+            elif ai.strip().lower() != "none":
                 errors.append("`ai` must be `none` or a block with `tools`, `did` and `me`")
         elif isinstance(ai, dict):
             for key in ("did", "me"):

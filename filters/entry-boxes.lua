@@ -235,7 +235,8 @@ function Pandoc(doc)
     pandoc.Div({ pandoc.Plain({ pandoc.Span(entry_type, pandoc.Attr("", { "entry-type" })) }) },
       pandoc.Attr("", { "entry-meta" })),
   })
-  if meta.ai ~= nil then
+  -- `ai: pending` (projects still in progress) shows no AI statement yet
+  if meta.ai ~= nil and str(meta.ai):lower() ~= "pending" then
     top:insert(ai_box(meta.ai))
   end
 
