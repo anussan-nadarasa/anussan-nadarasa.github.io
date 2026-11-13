@@ -70,6 +70,27 @@ local function ai_box(ai)
   return pandoc.Div(blocks, pandoc.Attr("", { "callout-note" }, { title = "How AI was used", icon = "false" }))
 end
 
+local function evidence_inlines(evidence)
+  local links = {}
+  for _, e in ipairs(as_list(evidence)) do
+    if pandoc.utils.type(e) == "table" or pandoc.utils.type(e) == "Meta" then
+      local label = e.label and str(e.label) or "Link"
+      local url = e.url and str(e.url) or ""
+      if url ~= "" then table.insert(links, pandoc.Link(label, url)) end
+    else
+      local url = str(e)
+      table.insert(links, pandoc.Link(url, url))
+    end
+  end
+  if #links == 0 then return nil end
+  local inl = pandoc.Inlines({ pandoc.Span("Evidence:", pandoc.Attr("", { "entry-meta-label" })), pandoc.Space() })
+  for k, l in ipairs(links) do
+    if k > 1 then inl:extend({ pandoc.Str(" ·"), pandoc.Space() }) end
+    inl:insert(l)
+  end
+  return inl
+end
+
 local function evidence_list(evidence)
   local items = {}
   for _, e in ipairs(as_list(evidence)) do
@@ -104,6 +125,20 @@ end
 
 local function esc(s)
   return (tostring(s):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;"))
+end
+
+local function thousands(n)
+  local s = tostring(math.floor(n))
+  local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+  return (out:gsub("^,", ""))
+end
+
+local function changed_words(added, removed)
+  local parts = {}
+  if added > 0 then table.insert(parts, thousands(added) .. " word" .. (added == 1 and "" or "s") .. " added") end
+  if removed > 0 then table.insert(parts, thousands(removed) .. " removed") end
+  if #parts == 0 then return "no change to the text" end
+  return table.concat(parts, ", ")
 end
 
 local function day_number(iso)
@@ -172,11 +207,11 @@ local function worklog_blocks(name)
   add('<div class="worklog">')
   add(string.format(
     '<p class="worklog-summary"><strong>%d commit%s</strong> on %d day%s across %d week%s, %s to %s. ' ..
-    '%d file changes, %d lines added, %d removed.</p>',
+    '%s file changes, %s lines added, %s removed.</p>',
     #commits, #commits == 1 and "" or "s", n_days, n_days == 1 and "" or "s",
     n_weeks, n_weeks == 1 and "" or "s",
     nice_date(commits[1].date), nice_date(commits[#commits].date),
-    math.floor(files), math.floor(added), math.floor(deleted)))
+    thousands(files), thousands(added), thousands(deleted)))
   add(weekly_chart(commits, first_day, n_weeks))
 
   local rel = log.release
@@ -330,9 +365,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var note = box.querySelector('.v-note');
   var prev = box.querySelector('.v-prev'), next = box.querySelector('.v-next');
   var shown = null, timer = null;
-  function words(v) {
-    return v.first ? v.added + ' words' : '+' + v.added + ' / −' + v.removed + ' words';
-  }
+  function words(v) { return v.words; }
   function render(focus) {
     var v = data[i], latest = i === n - 1;
     label.textContent = (latest ? 'Current version' : v.first ? 'First version' : 'Version ' + (i + 1) + ' of ' + n)
@@ -380,15 +413,15 @@ local function timeline_block(versions)
     sizes[k] = math.sqrt(math.max(size, 1))
     if sizes[k] > biggest then biggest = sizes[k] end
     table.insert(items, { date = nice_date(v.date), body = v.body or "", changes = v.changes or "",
-      added = v.added, removed = v.removed, first = first })
+      words = first and (thousands(v.added) .. " words") or changed_words(v.added, v.removed), first = first })
   end
   local json = pandoc.json.encode(items):gsub("</", "<\\/")
   local n = #versions
   local bars = {}
   for k, v in ipairs(versions) do
-    local h = math.floor(6 + 30 * sizes[k] / biggest + 0.5)
+    local h = math.floor(5 + 27 * sizes[k] / biggest + 0.5)
     local first = items[k].first
-    local what = first and (v.added .. " words") or ("+" .. v.added .. " / −" .. v.removed .. " words")
+    local what = items[k].words
     local name = (k == n and "Current version" or (first and "First version" or ("Version " .. k)))
     table.insert(bars, string.format(
       '<button type="button" class="v-bar" role="radio" aria-checked="%s" tabindex="%d" '
@@ -398,14 +431,14 @@ local function timeline_block(versions)
   end
   local html = string.format([[
 <div class="v-timeline">
-  <div class="v-row">
-    <span class="v-label" aria-live="polite">Current version</span>
-    <label class="v-toggle"><input type="checkbox"> Highlight changes</label>
-  </div>
   <div class="v-track">
     <button type="button" class="v-prev" aria-label="Previous version">‹</button>
     <div class="v-bars" role="radiogroup" aria-label="Versions of this entry">%s</div>
     <button type="button" class="v-next" aria-label="Next version">›</button>
+  </div>
+  <div class="v-info">
+    <span class="v-label" aria-live="polite">Current version</span>
+    <label class="v-toggle"><input type="checkbox"> Highlight changes</label>
   </div>
   <p class="v-note" hidden>An earlier version of the text below; the rest of the page is current.</p>
 </div>
@@ -424,9 +457,10 @@ local function versions_blocks(repo, versions)
   if #versions == 1 then
     add('<p class="versions-summary">One version, ' .. esc(when(versions[1].date)) .. '.</p>')
   else
-    add(string.format('<p class="versions-summary">%d versions, from %s to %s. Each shows what changed from the one before: '
-      .. '<del>removed</del>, <ins>added</ins>.</p>', #versions, esc(nice_date(versions[1].date)),
+    add(string.format('<details class="versions-record"><summary>%d versions, %s to %s: every change, word by word, '
+      .. 'including the header and the statement of AI use</summary>', #versions, esc(nice_date(versions[1].date)),
       esc(nice_date(versions[#versions].date))))
+    add('<p class="versions-key">Each version shows what changed from the one before: <del>removed</del>, <ins>added</ins>.</p>')
   end
   add('<ol class="versions-list">')
   for i = #versions, 1, -1 do
@@ -436,16 +470,18 @@ local function versions_blocks(repo, versions)
       link = ' · <a href="' .. esc(repo .. "/blob/" .. v.sha .. "/" .. v.path) .. '">this version</a>'
     end
     if v.html == nil or v.html == pandoc.json.null then
-      add(string.format('<li value="%d"><span class="v-when">%s</span> · first version, %d words%s</li>',
-        i, esc(when(v.date)), v.added, link))
+      add(string.format('<li value="%d"><span class="v-when">%s</span> · first version, %s words%s</li>',
+        i, esc(when(v.date)), thousands(v.added), link))
     else
       local plain_link = link:gsub("^ · ", "")
-      add(string.format('<li value="%d"><details><summary><span class="v-when">%s</span> · +%d / −%d words</summary>'
+      add(string.format('<li value="%d"><details><summary><span class="v-when">%s</span> · %s</summary>'
         .. '<div class="v-diff">%s</div><p class="v-link">%s</p></details></li>',
-        i, esc(when(v.date)), v.added, v.removed, v.html, plain_link))
+        i, esc(when(v.date)), esc(changed_words(v.added, v.removed)), v.html, plain_link))
     end
   end
-  add('</ol></div>')
+  add('</ol>')
+  if #versions > 1 then add('</details>') end
+  add('</div>')
   return pandoc.Blocks({
     pandoc.Header(2, "Versions", pandoc.Attr("versions")),
     pandoc.RawBlock("html", table.concat(h, "\n")),
@@ -457,9 +493,14 @@ function Pandoc(doc)
   if not meta.type then return nil end -- not an entry
 
   local entry_type = str(meta.type)
+  local meta_line = pandoc.Inlines({ pandoc.Span(entry_type, pandoc.Attr("", { "entry-type" })) })
+  local ev_inl = evidence_inlines(meta.evidence)
+  if ev_inl then
+    meta_line:insert(pandoc.Space())
+    meta_line:insert(pandoc.Span(ev_inl, pandoc.Attr("", { "entry-evidence" })))
+  end
   local top = pandoc.Blocks({
-    pandoc.Div({ pandoc.Plain({ pandoc.Span(entry_type, pandoc.Attr("", { "entry-type" })) }) },
-      pandoc.Attr("", { "entry-meta" })),
+    pandoc.Div({ pandoc.Plain(meta_line) }, pandoc.Attr("", { "entry-meta" })),
   })
   -- `ai: pending` (projects still in progress) shows no AI statement yet
   if meta.ai ~= nil and str(meta.ai):lower() ~= "pending" then
@@ -471,8 +512,6 @@ function Pandoc(doc)
     local wl = worklog_blocks(str(meta.worklog))
     if wl then bottom:extend(wl) end
   end
-  local ev = evidence_list(meta.evidence)
-  if ev then bottom:extend(ev) end
 
   local repo = meta["history-repo"] and str(meta["history-repo"]) or ""
   if repo:find("YOUR%-GITHUB%-USERNAME") then repo = "" end
