@@ -312,64 +312,106 @@ local function load_versions()
   return versions
 end
 
--- Slider above the text: move it to read any earlier version, with an
--- option to highlight what changed from the version before.
-local SLIDER_JS = [[
+-- Version timeline above the text: one bar per version, its height showing
+-- how much changed. Click a bar (or use the arrows) to read that version,
+-- with an option to highlight what changed from the version before.
+local TIMELINE_JS = [[
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  var box = document.querySelector('.v-slider');
+  var box = document.querySelector('.v-timeline');
   var body = document.getElementById('entry-body');
   var src = document.getElementById('v-data');
   if (!box || !body || !src) return;
   var data = JSON.parse(src.textContent);
-  var n = data.length, current = body.innerHTML;
-  var range = box.querySelector('input[type=range]');
+  var n = data.length, current = body.innerHTML, i = n - 1;
+  var bars = Array.prototype.slice.call(box.querySelectorAll('.v-bar'));
   var label = box.querySelector('.v-label');
-  var toggle = box.querySelector('input[type=checkbox]');
+  var toggle = box.querySelector('.v-toggle input');
   var note = box.querySelector('.v-note');
+  var prev = box.querySelector('.v-prev'), next = box.querySelector('.v-next');
   var shown = null, timer = null;
-  function render() {
-    var i = +range.value - 1, latest = i === n - 1;
-    label.textContent = (latest ? 'Current version' : 'Version ' + (i + 1) + ' of ' + n) + ' \u00b7 ' + data[i].date;
+  function words(v) {
+    return v.first ? v.added + ' words' : '+' + v.added + ' / −' + v.removed + ' words';
+  }
+  function render(focus) {
+    var v = data[i], latest = i === n - 1;
+    label.textContent = (latest ? 'Current version' : v.first ? 'First version' : 'Version ' + (i + 1) + ' of ' + n)
+      + ' · ' + v.date + ' · ' + words(v);
+    bars.forEach(function (b, k) {
+      b.setAttribute('aria-checked', k === i ? 'true' : 'false');
+      b.tabIndex = k === i ? 0 : -1;
+    });
+    if (focus) bars[i].focus();
+    prev.disabled = i === 0; next.disabled = latest;
     toggle.disabled = i === 0;
     toggle.parentNode.classList.toggle('v-off', i === 0);
     var showChanges = toggle.checked && i > 0;
-    var html = showChanges ? data[i].changes : (latest ? current : data[i].body);
     note.hidden = latest;
     var key = i + ':' + showChanges;
     if (key === shown) return;
     shown = key;
+    var html = showChanges ? v.changes : (latest ? current : v.body);
     body.style.opacity = 0;
     clearTimeout(timer);
     timer = setTimeout(function () { body.innerHTML = html; body.style.opacity = 1; }, 140);
   }
-  range.addEventListener('input', render);
-  toggle.addEventListener('change', render);
-  render();
+  function go(k, focus) { i = Math.max(0, Math.min(n - 1, k)); render(focus); }
+  bars.forEach(function (b, k) { b.addEventListener('click', function () { go(k, false); }); });
+  box.querySelector('.v-bars').addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') { go(i - 1, true); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { go(i + 1, true); e.preventDefault(); }
+    if (e.key === 'Home') { go(0, true); e.preventDefault(); }
+    if (e.key === 'End') { go(n - 1, true); e.preventDefault(); }
+  });
+  prev.addEventListener('click', function () { go(i - 1, false); });
+  next.addEventListener('click', function () { go(i + 1, false); });
+  toggle.addEventListener('change', function () { render(false); });
+  render(false);
 });
 </script>
 ]]
 
-local function slider_block(versions)
+local function timeline_block(versions)
   if #versions < 2 then return nil end
-  local items = {}
-  for _, v in ipairs(versions) do
-    table.insert(items, { date = nice_date(v.date), body = v.body or "", changes = v.changes or "" })
+  local items, sizes, biggest = {}, {}, 1
+  for k, v in ipairs(versions) do
+    local first = (v.html == nil or v.html == pandoc.json.null)
+    local size = first and v.added or (v.added + v.removed)
+    sizes[k] = math.sqrt(math.max(size, 1))
+    if sizes[k] > biggest then biggest = sizes[k] end
+    table.insert(items, { date = nice_date(v.date), body = v.body or "", changes = v.changes or "",
+      added = v.added, removed = v.removed, first = first })
   end
   local json = pandoc.json.encode(items):gsub("</", "<\\/")
   local n = #versions
+  local bars = {}
+  for k, v in ipairs(versions) do
+    local h = math.floor(6 + 30 * sizes[k] / biggest + 0.5)
+    local first = items[k].first
+    local what = first and (v.added .. " words") or ("+" .. v.added .. " / −" .. v.removed .. " words")
+    local name = (k == n and "Current version" or (first and "First version" or ("Version " .. k)))
+    table.insert(bars, string.format(
+      '<button type="button" class="v-bar" role="radio" aria-checked="%s" tabindex="%d" '
+      .. 'aria-label="%s, %s, %s" title="%s · %s"><span style="height:%dpx"></span></button>',
+      k == n and "true" or "false", k == n and 0 or -1, esc(name), esc(items[k].date), esc(what),
+      esc(items[k].date), esc(what), h))
+  end
   local html = string.format([[
-<div class="v-slider">
+<div class="v-timeline">
   <div class="v-row">
-    <label for="v-range" class="v-label">Current version</label>
-    <label class="v-toggle"><input type="checkbox"> Highlight changes from the previous version</label>
+    <span class="v-label" aria-live="polite">Current version</span>
+    <label class="v-toggle"><input type="checkbox"> Highlight changes</label>
   </div>
-  <input id="v-range" type="range" min="1" max="%d" step="1" value="%d" aria-label="Version">
-  <p class="v-note" hidden>An earlier version of the text below; the rest of the page is current. Slide right for the latest.</p>
+  <div class="v-track">
+    <button type="button" class="v-prev" aria-label="Previous version">‹</button>
+    <div class="v-bars" role="radiogroup" aria-label="Versions of this entry">%s</div>
+    <button type="button" class="v-next" aria-label="Next version">›</button>
+  </div>
+  <p class="v-note" hidden>An earlier version of the text below; the rest of the page is current.</p>
 </div>
 <script type="application/json" id="v-data">%s</script>
-]], n, n, json)
-  return pandoc.RawBlock("html", html .. SLIDER_JS)
+]], table.concat(bars, ""), json)
+  return pandoc.RawBlock("html", html .. TIMELINE_JS)
 end
 
 local function versions_blocks(repo, versions)
@@ -437,7 +479,7 @@ function Pandoc(doc)
   local versions = load_versions()
   local vb = versions_blocks(repo, versions)
   if vb then bottom:extend(vb) end
-  local slider = versions and slider_block(versions)
+  local slider = versions and timeline_block(versions)
   local branch = meta["history-branch"] and str(meta["history-branch"]) or "main"
   local rel = relative_source_path()
   if repo ~= "" and not repo:find("YOUR%-GITHUB%-USERNAME") and rel then
