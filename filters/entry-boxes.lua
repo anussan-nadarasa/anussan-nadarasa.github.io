@@ -310,7 +310,7 @@ local function versions_blocks(repo)
   f:close()
   if type(versions) ~= "table" or #versions == 0 then return nil end
 
-  local function when(iso) return nice_date(iso) .. ", " .. iso:sub(12, 16) end
+  local function when(iso) return nice_date(iso) end
   local h = {}
   local function add(s) table.insert(h, s) end
   add('<div class="versions">')
