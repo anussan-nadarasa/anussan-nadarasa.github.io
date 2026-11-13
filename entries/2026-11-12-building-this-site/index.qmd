@@ -9,7 +9,7 @@ evidence:
     url: https://github.com/anussan-nadarasa/anussan-nadarasa.github.io
 ai:
   tools: [Claude Opus 5.5]
-  did: "Proposed designs in response to the author's requirements and implemented them: site configuration, checks and deployment, the work-log export, reflection fingerprinting and release checks. Drafted the initial site text."
+  did: "Proposed designs in response to the author's requirements and implemented them: site configuration, checks and deployment, the work-log export, reflection fingerprinting, release checks and version comparisons. Drafted the initial site text."
   me: "Set the purpose and every requirement: a git-based site rather than Notion; nothing published without review, except the nightly work logs; integration with real research projects, kept private until a clean public release; work logs updated automatically; daily reflections; projects in progress revealing nothing of their topic; reflections verifiable after release, including any edited later. Chose between the options proposed, questioned and corrected the drafts, set the wording of the site, set up the accounts and repositories, and reviewed every page before publication."
 ---
 
@@ -19,7 +19,7 @@ The aim is a site where each claim of a skill comes with evidence that can be ch
 
 Six decisions follow from that:
 
-1. **Plain text in git.** Every entry is a text file in a public repository, so its full revision history is open, and each entry links to its own.
+1. **Plain text in git.** Every entry is a text file in a public repository, so its full revision history is open, and each entry shows what changed from one version to the next.
 2. **Checks before publishing.** A script scans every change for NHS numbers and similar identifiers, and blocks data files, before anything is committed.
 3. **A required statement of AI use.** Every evidence entry has to say what generative AI did and what was done and checked by hand; projects still in progress add it when they are released. The build fails if it is missing.
 4. **Nothing is published without review, with one exception.** Every change is checked and built automatically, but the site only goes live when publishing is started by hand. The exception is work logs: they publish themselves each night, and only when nothing else has changed since the last reviewed version.
@@ -34,7 +34,8 @@ Six decisions follow from that:
 - An automatic build on every push, with publishing to GitHub Pages started by hand (work logs excepted).
 - A nightly job in each private project that exports its work log and reflection fingerprints to this site.
 - Checks that a published fingerprint is never dropped or changed, and that every released reflection's label ("matches" or "revised") is correct.
+- A word-by-word comparison of every version of each entry, built from its git history.
 
 ## Next
 
-Version-by-version comparisons on each page, and a skills ledger showing when each skill was first and last evidenced.
+A skills ledger showing when each skill was first and last evidenced.

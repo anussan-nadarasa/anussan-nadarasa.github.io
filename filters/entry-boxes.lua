@@ -321,7 +321,7 @@ local function versions_blocks(repo)
       .. '<del>removed</del>, <ins>added</ins>.</p>', #versions, esc(nice_date(versions[1].date)),
       esc(nice_date(versions[#versions].date))))
   end
-  add('<ol class="versions-list" reversed>')
+  add('<ol class="versions-list">')
   for i = #versions, 1, -1 do
     local v = versions[i]
     local link = ""
@@ -329,12 +329,13 @@ local function versions_blocks(repo)
       link = ' · <a href="' .. esc(repo .. "/blob/" .. v.sha .. "/" .. v.path) .. '">this version</a>'
     end
     if v.html == nil or v.html == pandoc.json.null then
-      add(string.format('<li><span class="v-when">%s</span> · first version, %d words%s</li>',
-        esc(when(v.date)), v.added, link))
+      add(string.format('<li value="%d"><span class="v-when">%s</span> · first version, %d words%s</li>',
+        i, esc(when(v.date)), v.added, link))
     else
-      add(string.format('<li><details><summary><span class="v-when">%s</span> · +%d / −%d words</summary>'
+      local plain_link = link:gsub("^ · ", "")
+      add(string.format('<li value="%d"><details><summary><span class="v-when">%s</span> · +%d / −%d words</summary>'
         .. '<div class="v-diff">%s</div><p class="v-link">%s</p></details></li>',
-        esc(when(v.date)), v.added, v.removed, v.html, link:gsub("^ · ", "")))
+        i, esc(when(v.date)), v.added, v.removed, v.html, plain_link))
     end
   end
   add('</ol></div>')

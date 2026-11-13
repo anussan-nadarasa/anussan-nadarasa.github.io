@@ -49,33 +49,53 @@ def history(rel):
     return items
 
 
+def chunks(a, b):
+    """Opcodes merged into readable chunks: short unchanged stretches between
+    two changes (a few words such as "the" or "and") are folded into the
+    change, so a rewritten phrase reads as old phrase, then new phrase."""
+    ops = difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes()
+    out = []  # [tag, a_tokens, b_tokens]
+    for k, (tag, i1, i2, j1, j2) in enumerate(ops):
+        seg = [tag, a[i1:i2], b[j1:j2]]
+        words = sum(1 for t in seg[1] if t.strip())
+        between = 0 < k < len(ops) - 1
+        if tag == "equal" and between and words <= 3 and "\n" not in seg[1]:
+            seg[0] = "change"
+        elif tag != "equal":
+            seg[0] = "change"
+        if out and out[-1][0] == "change" and seg[0] == "change":
+            out[-1][1] += seg[1]; out[-1][2] += seg[2]
+        else:
+            out.append(seg)
+    return out
+
+
 def compare(old, new):
     """Word-level comparison as HTML, with long unchanged stretches folded."""
     a, b = TOKEN.findall(old), TOKEN.findall(new)
-    sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
     parts, added, removed = [], 0, 0
-    ops = sm.get_opcodes()
-    for i, (tag, i1, i2, j1, j2) in enumerate(ops):
+    segs = chunks(a, b)
+    for i, (tag, sa, sb) in enumerate(segs):
         if tag == "equal":
-            seg = a[i1:i2]
-            first, last = i == 0, i == len(ops) - 1
+            first, last = i == 0, i == len(segs) - 1
             keep_head = 0 if first else CONTEXT * 2
             keep_tail = 0 if last else CONTEXT * 2
-            if len(seg) > keep_head + keep_tail + 4:
-                head = "".join(seg[:keep_head])
-                tail = "".join(seg[len(seg) - keep_tail:]) if keep_tail else ""
+            if len(sa) > keep_head + keep_tail + 4:
+                head = "".join(sa[:keep_head])
+                tail = "".join(sa[len(sa) - keep_tail:]) if keep_tail else ""
                 parts.append(html.escape(head) + '<span class="v-gap">…</span>' + html.escape(tail))
             else:
-                parts.append(html.escape("".join(seg)))
+                parts.append(html.escape("".join(sa)))
             continue
-        if tag in ("delete", "replace"):
-            seg = "".join(a[i1:i2])
-            removed += sum(1 for t in a[i1:i2] if t.strip())
-            parts.append(f"<del>{html.escape(seg)}</del>")
-        if tag in ("insert", "replace"):
-            seg = "".join(b[j1:j2])
-            added += sum(1 for t in b[j1:j2] if t.strip())
-            parts.append(f"<ins>{html.escape(seg)}</ins>")
+        old_t, new_t = "".join(sa), "".join(sb)
+        removed += sum(1 for t in sa if t.strip())
+        added += sum(1 for t in sb if t.strip())
+        if old_t.strip():
+            parts.append(f"<del>{html.escape(old_t)}</del>")
+        if new_t.strip():
+            parts.append(f"<ins>{html.escape(new_t)}</ins>")
+        elif not old_t.strip():
+            parts.append(html.escape(new_t))
     return "".join(parts), added, removed
 
 
