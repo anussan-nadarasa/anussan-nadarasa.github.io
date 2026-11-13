@@ -14,7 +14,7 @@ listing:
   filter-ui: false
 ---
 
-A record of skills acquired. Why this site exists is on the [about page](about.qmd).
+A record of research skills acquired. Why this site exists is on the [about page](about.qmd).
 
 ## Recently updated
 
