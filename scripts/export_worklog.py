@@ -5,6 +5,7 @@ Exports a project's git history as a work log for this site.
     python3 scripts/export_worklog.py PATH/TO/PROJECT NAME
     python3 scripts/export_worklog.py PATH/TO/PROJECT NAME --public https://github.com/OWNER/REPO
     python3 scripts/export_worklog.py PATH/TO/PROJECT NAME --release PATH/TO/PUBLIC/CLONE https://github.com/OWNER/REPO
+    add  --notes PATH/TO/PROJECT/reflections  to any of these to include reflections
 
 Writes worklogs/NAME.json. Point an entry at it with `worklog: NAME`.
 
@@ -27,6 +28,12 @@ already been published (for example after a force-push in the project).
 If a project's history really had to be rewritten, export it under a new
 NAME; the site's checks reject any log that loses published fingerprints.
 
+--notes DIR: short reflections written in the project, one file per day named
+YYYY-MM-DD.md (plain text; lines starting with # are ignored). A file
+DIR/.blocklist lists words or phrases, one per line, that would give the
+project away; a note containing any of them is held back and not exported.
+Notes may be edited or removed later; only commits are append-only.
+
 A log whose commits have not changed is left untouched, so nothing is pushed
 on days without new work.
 
@@ -48,6 +55,39 @@ SITE = Path(__file__).resolve().parent.parent
 
 def die(msg):
     sys.exit(f"export_worklog.py: {msg}")
+
+
+NOTE_FILE = re.compile(r"(\d{4}-\d{2}-\d{2})\.md")
+NOTE_MAX = 1200
+
+
+def read_notes(folder):
+    """Dated reflections, minus any that contain a blocked word or phrase."""
+    block_file = folder / ".blocklist"
+    blocked = []
+    if block_file.exists():
+        for line in block_file.read_text(encoding="utf-8").splitlines():
+            w = line.strip()
+            if w and not w.startswith("#"):
+                blocked.append(re.compile(r"(?<![\w-])" + re.escape(w) + r"(?:s|es)?(?![\w-])", re.I))
+    notes = []
+    for f in sorted(folder.iterdir()):
+        m = NOTE_FILE.fullmatch(f.name)
+        if not m:
+            continue
+        lines = [l.strip() for l in f.read_text(encoding="utf-8").splitlines()]
+        text = " ".join(l for l in lines if l and not l.startswith("#") and not l.startswith("<!--"))
+        if not text:
+            continue
+        hits = [p.pattern for p in blocked if p.search(text)]
+        if hits:
+            print(f"export_worklog.py: reflection {m.group(1)} held back (contains a blocked word)")
+            continue
+        if len(text) > NOTE_MAX:
+            print(f"export_worklog.py: reflection {m.group(1)} held back (longer than {NOTE_MAX} characters)")
+            continue
+        notes.append({"date": m.group(1), "text": text})
+    return notes
 
 
 def main():
@@ -74,6 +114,13 @@ def main():
             die(f"{rel_clone} is not a git repository")
         rev = lambda r: subprocess.check_output(["git", "-C", str(rel_clone), "rev-parse", r], text=True).strip()
         release = {"repo": rel_url, "commit": rev("HEAD"), "tree": rev("HEAD^{tree}")}
+    notes_dir = None
+    if "--notes" in args:
+        i = args.index("--notes")
+        if i + 1 >= len(args):
+            die("--notes needs the path to the reflections folder")
+        notes_dir = Path(args[i + 1]).resolve()
+        del args[i:i + 2]
     if public and release:
         die("use either --public or --release, not both")
     if len(args) != 2:
@@ -122,6 +169,10 @@ def main():
     }
     if public:
         log["repo"] = public
+    if notes_dir and notes_dir.is_dir():
+        notes = read_notes(notes_dir)
+        if notes:
+            log["notes"] = notes
     if release:
         if release["tree"] not in {c["tree"] for c in commits}:
             die("the public release's contents do not match any tracked commit. Publish exactly "

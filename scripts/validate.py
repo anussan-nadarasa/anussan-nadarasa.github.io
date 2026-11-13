@@ -145,7 +145,7 @@ def check_worklog(path: Path):
     if not isinstance(log, dict):
         return ["must be a JSON object"]
     source = log.get("source")
-    allowed = {"name", "source", "exported", "commits"} | ({"repo"} if source == "public" else {"release"})
+    allowed = {"name", "source", "exported", "commits", "notes"} | ({"repo"} if source == "public" else {"release"})
     extra = set(log) - allowed
     if extra:
         errors.append(f"unexpected fields: {', '.join(sorted(extra))}")
@@ -177,6 +177,18 @@ def check_worklog(path: Path):
         for k in ("files", "added", "deleted"):
             if not isinstance(c.get(k), int) or c.get(k) < 0:
                 errors.append(f"commit {i}: `{k}` must be a whole number")
+    notes = log.get("notes")
+    if notes is not None:
+        if not isinstance(notes, list):
+            errors.append("`notes` must be a list")
+        else:
+            for i, n in enumerate(notes):
+                if not isinstance(n, dict) or set(n) != {"date", "text"}:
+                    errors.append(f"note {i} must have exactly date and text"); continue
+                if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(n["date"])):
+                    errors.append(f"note {i}: `date` must be YYYY-MM-DD")
+                if not isinstance(n["text"], str) or not n["text"].strip() or len(n["text"]) > 1200:
+                    errors.append(f"note {i}: `text` must be 1 to 1200 characters")
     rel = log.get("release")
     if rel is not None:
         if not isinstance(rel, dict) or set(rel) != {"repo", "commit", "tree"}:

@@ -220,10 +220,23 @@ local function worklog_blocks(name)
   end
   add('</div>')
 
-  return pandoc.Blocks({
+  local blocks = pandoc.Blocks({
     pandoc.Header(2, "Work log", pandoc.Attr("work-log")),
     pandoc.RawBlock("html", table.concat(h, "\n")),
   })
+
+  -- Short dated reflections written in the project, newest first.
+  local notes = log.notes or {}
+  if #notes > 0 then
+    blocks:insert(pandoc.Header(3, "Reflections", pandoc.Attr("reflections")))
+    for i = #notes, 1, -1 do
+      local n = notes[i]
+      local inl = pandoc.Inlines({ pandoc.Strong(nice_date(n.date .. "T00:00:00Z")), pandoc.Str("."), pandoc.Space() })
+      inl:extend(pandoc.Inlines(n.text))
+      blocks:insert(pandoc.Div({ pandoc.Para(inl) }, pandoc.Attr("", { "reflection" })))
+    end
+  end
+  return blocks
 end
 
 function Pandoc(doc)
